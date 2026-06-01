@@ -6,3 +6,4 @@ node_modules/
 .DS_Store
 dist/
 .vercel/
+scripts/tenants-output.json
