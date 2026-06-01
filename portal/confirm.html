@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Confirmed — YardBoss</title>
+  <link rel="stylesheet" href="css/portal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+<nav class="portal-nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"><i class="fas fa-truck"></i></div>
+    <span class="nav-logo-text">YardBoss</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html#lots" class="nav-link">Locations</a>
+    <a href="lookup.html" class="nav-link">My Reservation</a>
+    <a href="book.html" class="btn-nav"><i class="fas fa-plus"></i> Book Now</a>
+  </div>
+</nav>
+
+<div class="confirm-wrapper">
+  <div class="confirm-card">
+    <div class="confirm-icon"><i class="fas fa-check"></i></div>
+    <h2>Booking Confirmed!</h2>
+    <p class="confirm-sub">Your space has been reserved. A confirmation email has been sent.</p>
+
+    <div class="confirm-ref">
+      <div class="confirm-ref-label">Booking Reference</div>
+      <div class="confirm-ref-id" id="confirmRefId">Loading...</div>
+    </div>
+
+    <div class="confirm-details" id="confirmDetails">
+      <div class="confirm-details-row"><span class="label">Tenant Name</span><span class="value" id="confName">—</span></div>
+      <div class="confirm-details-row"><span class="label">Email</span><span class="value" id="confEmail">—</span></div>
+      <div class="confirm-details-row"><span class="label">Yard Location</span><span class="value" id="confLot">—</span></div>
+      <div class="confirm-details-row"><span class="label">Space Number</span><span class="value" id="confSpace">—</span></div>
+      <div class="confirm-details-row"><span class="label">Space Type</span><span class="value" id="confType">—</span></div>
+      <div class="confirm-details-row"><span class="label">Lease Start</span><span class="value" id="confStart">—</span></div>
+      <div class="confirm-details-row"><span class="label">Lease End</span><span class="value" id="confEnd">—</span></div>
+      <div class="confirm-details-row"><span class="label">Monthly Rate</span><span class="value" id="confRate">—</span></div>
+      <div class="confirm-details-row"><span class="label">Payment</span><span class="value" style="color:var(--green);">✓ Processed</span></div>
+    </div>
+
+    <div style="background:#f0fdfb; border:1px solid #99f6e4; border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:24px; font-size:0.85rem; color:#0f766e; text-align:left;">
+      <i class="fas fa-info-circle" style="margin-right:6px;"></i>
+      <strong>Next steps:</strong> You'll receive gate access instructions and your space number via email within 1 business day. Contact us at <strong>(713) 555-0142</strong> with any questions.
+    </div>
+
+    <div class="confirm-actions">
+      <a href="index.html" class="btn-outline" style="color:var(--navy); border-color:var(--gray-300);">
+        <i class="fas fa-home"></i> Back to Home
+      </a>
+      <a href="lookup.html" class="btn-primary">
+        <i class="fas fa-search"></i> View My Reservation
+      </a>
+      <button onclick="window.print()" class="btn-outline" style="color:var(--navy); border-color:var(--gray-300);">
+        <i class="fas fa-print"></i> Print
+      </button>
+    </div>
+  </div>
+</div>
+
+<footer class="portal-footer" style="margin-top:40px;">
+  <div class="footer-logo"><i class="fas fa-truck"></i> YardBoss</div>
+  <p>© 2025 Thompson Yard Management LLC</p>
+</footer>
+
+<script src="js/portal.js"></script>
+<script>
+(function() {
+  // Read reservation data passed via sessionStorage from book.js
+  const raw = sessionStorage.getItem('yb_confirm');
+  if (!raw) {
+    document.getElementById('confirmRefId').textContent = 'N/A';
+    return;
+  }
+  const data = JSON.parse(raw);
+  document.getElementById('confirmRefId').textContent = (data.id || 'N/A').toUpperCase();
+  document.getElementById('confName').textContent = data.tenantName || '—';
+  document.getElementById('confEmail').textContent = data.email || '—';
+  document.getElementById('confLot').textContent = data.lotName || data.lotId || '—';
+  document.getElementById('confSpace').textContent = data.spaceNumber || '—';
+  document.getElementById('confType').textContent = data.spaceType || '—';
+  document.getElementById('confStart').textContent = formatDate(data.startDate);
+  document.getElementById('confEnd').textContent = formatDate(data.endDate);
+  document.getElementById('confRate').textContent = '$' + (data.monthlyRate || 0).toLocaleString() + '/month';
+
+  function formatDate(str) {
+    if (!str) return '—';
+    return new Date(str).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
+  // Clear storage after displaying (keep it for lookup)
+  // sessionStorage.removeItem('yb_confirm');
+})();
+</script>
+</body>
+</html>

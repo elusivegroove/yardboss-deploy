@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports — YardBoss</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/charts.css">
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<!-- Command Strip -->
+<div class="cmd-strip">
+  <span class="cmd-title"><i class="fas fa-chart-bar" style="color:var(--teal);margin-right:6px;"></i>Reports</span>
+  <div class="cmd-divider"></div>
+  <div class="cmd-breadcrumb"><span class="current">All Reports</span></div>
+  <div class="cmd-actions">
+    <button class="cmd-btn"><i class="fas fa-download"></i> Export All</button>
+  </div>
+</div>
+
+<!-- Page Content -->
+<main class="page-content">
+
+  <div class="reports-layout">
+    <div class="reports-left">
+
+      <div class="report-section">
+        <h3>Financial Reports</h3>
+        <div class="report-cards-grid" id="financialCards"></div>
+      </div>
+
+      <div class="report-section">
+        <h3>Operational Insights</h3>
+        <div class="report-cards-grid" id="operationalCards"></div>
+      </div>
+
+    </div>
+
+    <div class="reports-right">
+      <div class="card quick-glance-widget">
+        <h3 style="font-size:0.9rem;font-weight:700;color:var(--navy);margin-bottom:12px;">Quick Glance</h3>
+        <div id="quickGlanceRows"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Report Modal -->
+<div class="modal-backdrop" id="reportModal">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <h3 id="reportModalTitle">Report</h3>
+      <button class="modal-close" id="closeReportModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="reportModalContent"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" id="cancelReportModal">Close</button>
+      <button type="button" class="btn-primary" id="exportCsvBtn"><i class="fas fa-download"></i> Export CSV</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="js/reports.js"></script>
+</body>
+</html>

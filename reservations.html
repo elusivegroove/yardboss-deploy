@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tenants &amp; Reservations — YardBoss</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/charts.css">
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<!-- Command Strip -->
+<div class="cmd-strip">
+  <span class="cmd-title"><i class="fas fa-users" style="color:var(--teal);margin-right:6px;"></i>Tenants &amp; Reservations</span>
+  <div class="cmd-divider"></div>
+  <div style="display:flex;gap:4px;">
+    <button class="tab-btn cmd-btn active" data-tab="all">All <span class="tab-count" style="background:rgba(255,255,255,0.2);padding:1px 6px;border-radius:99px;font-size:0.7rem;margin-left:2px;">0</span></button>
+    <button class="tab-btn cmd-btn" data-tab="active">Active <span class="tab-count" style="background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:99px;font-size:0.7rem;margin-left:2px;">0</span></button>
+    <button class="tab-btn cmd-btn" data-tab="pending">Pending <span class="tab-count" style="background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:99px;font-size:0.7rem;margin-left:2px;">0</span></button>
+    <button class="tab-btn cmd-btn" data-tab="past">Past <span class="tab-count" style="background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:99px;font-size:0.7rem;margin-left:2px;">0</span></button>
+  </div>
+  <div class="cmd-actions">
+    <input type="text" id="tenantSearch" placeholder="Search name, email..." class="cmd-yard-select" style="min-width:220px;">
+    <button class="cmd-btn" id="exportTenantsBtn"><i class="fas fa-download"></i> Export CSV</button>
+    <button class="cmd-btn" id="importTenantsBtn"><i class="fas fa-file-import"></i> Import</button>
+    <button class="cmd-btn primary" id="addTenantBtn"><i class="fas fa-user-plus"></i> Add Tenant</button>
+  </div>
+</div>
+
+<!-- Page Content -->
+<main class="page-content">
+  <div class="card">
+    <div class="table-wrapper">
+      <table id="tenantsTable">
+        <thead>
+          <tr>
+            <th>Tenant</th>
+            <th>Registration</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Lot</th>
+            <th>Status</th>
+            <th>Booking</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tenantsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- ── Slide Panel ──────────────────────────────────────────────────────── -->
+<div class="panel-overlay" id="panelOverlay"></div>
+<div class="slide-panel" id="tenantPanel">
+  <div class="panel-header">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div class="tenant-avatar-lg" id="panelAvatar">--</div>
+      <div>
+        <div style="font-size:1rem;font-weight:700;color:var(--navy)" id="panelName">Tenant Name</div>
+        <span class="badge" id="panelStatus">Active</span>
+      </div>
+    </div>
+    <button class="modal-close" id="closePanelBtn"><i class="fas fa-times"></i></button>
+  </div>
+
+  <div class="panel-section">
+    <h4>Contact</h4>
+    <div class="panel-info-row"><span class="label"><i class="fas fa-envelope" style="margin-right:6px;color:var(--teal)"></i>Email</span><span class="value" id="panelEmail">-</span></div>
+    <div class="panel-info-row"><span class="label"><i class="fas fa-phone" style="margin-right:6px;color:var(--teal)"></i>Phone</span><span class="value" id="panelPhone">-</span></div>
+    <div class="panel-info-row"><span class="label"><i class="fas fa-building" style="margin-right:6px;color:var(--teal)"></i>Company</span><span class="value" id="panelCompany">-</span></div>
+  </div>
+
+  <div class="panel-section">
+    <h4>Lot Assignment</h4>
+    <div class="panel-info-row"><span class="label">Lot</span><span class="value" id="panelLot">-</span></div>
+    <div class="panel-info-row"><span class="label">Space #</span><span class="value" id="panelSpace">-</span></div>
+    <div class="panel-info-row"><span class="label">Monthly Rate</span><span class="value" id="panelRate">-</span></div>
+    <div class="panel-info-row"><span class="label">Start Date</span><span class="value" id="panelStart">-</span></div>
+    <div class="panel-info-row"><span class="label">End Date</span><span class="value" id="panelEnd">-</span></div>
+  </div>
+
+  <div class="panel-section">
+    <h4>Vehicle</h4>
+    <div class="panel-info-row"><span class="label">Vehicle</span><span class="value" id="panelVehicle">-</span></div>
+    <div class="panel-info-row"><span class="label">Type</span><span class="value" id="panelVehicleType">-</span></div>
+    <div class="panel-info-row"><span class="label">License Plate</span><span class="value" id="panelPlate">-</span></div>
+    <div class="panel-info-row"><span class="label">Truck #</span><span class="value" id="panelTruckNumber">-</span></div>
+    <div class="panel-info-row"><span class="label">Trailer #</span><span class="value" id="panelTrailerNumber">-</span></div>
+    <div class="panel-info-row"><span class="label">Plate State</span><span class="value" id="panelPlateState">-</span></div>
+  </div>
+
+  <div class="panel-section">
+    <h4>Insurance Documents</h4>
+    <div id="panelInsurancePreview" style="margin-bottom:8px;"></div>
+    <div class="panel-info-row"><span class="label">Policy #</span><span class="value" id="panelInsurancePolicy">-</span></div>
+    <div class="panel-info-row"><span class="label">Company</span><span class="value" id="panelInsuranceCompany">-</span></div>
+    <div class="panel-info-row"><span class="label">Expires</span><span class="value" id="panelInsuranceExp">-</span></div>
+  </div>
+
+  <div class="panel-section">
+    <h4>Billing</h4>
+    <div class="panel-info-row"><span class="label">Payment Method</span><span class="value" id="panelPaymentMethod">-</span></div>
+    <div class="panel-info-row" id="panelAutopayCardRow"><span class="label">Card on File</span><span class="value" id="panelAutopayCard">-</span></div>
+    <div class="panel-info-row" id="panelAutopayNextRow"><span class="label">Next Auto-Pay</span><span class="value" id="panelAutopayNext">-</span></div>
+    <div class="panel-info-row"><span class="label">Auto-Renewal</span><span class="value" id="panelAutoRenew">-</span></div>
+    <div class="panel-info-row" id="panelRenewalPeriodRow"><span class="label">Renewal Period</span><span class="value" id="panelRenewalPeriod">-</span></div>
+    <div class="panel-info-row" id="panelRenewalRateRow"><span class="label">Renewal Rate</span><span class="value" id="panelRenewalRate">-</span></div>
+    <div id="panelRunAutopayWrap" style="margin-top:10px;display:none;">
+      <button class="btn btn-primary btn-sm" id="panelRunAutopayBtn" style="width:100%;"><i class="fas fa-credit-card"></i> Run Auto-Pay Now</button>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <h4>Payment History</h4>
+    <div id="panelPayments"></div>
+  </div>
+
+  <div style="display:flex;gap:10px;padding:16px;border-top:1px solid var(--gray-100);margin-top:8px;">
+    <button class="btn btn-secondary" style="flex:1" id="panelMessageBtn"><i class="fas fa-envelope"></i> Message</button>
+    <button class="btn btn-primary" style="flex:1" id="panelEditBtn"><i class="fas fa-edit"></i> Edit Tenant</button>
+  </div>
+</div>
+
+<!-- ── Add / Edit Tenant Modal ──────────────────────────────────────────── -->
+<div class="modal-backdrop" id="addTenantModal">
+  <div class="modal" style="max-width:720px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-header" style="position:sticky;top:0;background:#fff;z-index:10;border-bottom:1px solid var(--gray-100);">
+      <h3 id="addTenantModalTitle" class="modal-title">Add New Tenant</h3>
+      <button class="modal-close" id="closeAddTenantModal"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="addTenantForm" style="padding:20px 24px;">
+
+      <!-- Basic Info -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" id="atName" placeholder="John Smith" required>
+        </div>
+        <div class="form-group">
+          <label>Email *</label>
+          <input type="email" id="atEmail" placeholder="john@example.com" required>
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" id="atPhone" placeholder="(863) 555-0100">
+        </div>
+        <div class="form-group">
+          <label>Company</label>
+          <input type="text" id="atCompany" placeholder="ABC Trucking LLC">
+        </div>
+        <div class="form-group">
+          <label>Lot *</label>
+          <select id="atLotId" required></select>
+        </div>
+        <div class="form-group">
+          <label>Space # *</label>
+          <input type="text" id="atSpace" placeholder="R-12 or T-05" required>
+        </div>
+        <div class="form-group">
+          <label>Monthly Rate ($)</label>
+          <input type="number" id="atRate" min="0" step="0.01" placeholder="350">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="atStatus">
+            <option value="active">Active</option>
+            <option value="pending">Pending</option>
+            <option value="past">Past</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Start Date</label>
+          <input type="date" id="atStart">
+        </div>
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" id="atEnd">
+        </div>
+      </div>
+
+      <!-- Vehicle Information -->
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:10px;">Vehicle Information</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+          <div class="form-group">
+            <label>Make</label>
+            <input type="text" id="atVehicleMake" placeholder="Freightliner">
+          </div>
+          <div class="form-group">
+            <label>Model</label>
+            <input type="text" id="atVehicleModel" placeholder="Cascadia">
+          </div>
+          <div class="form-group">
+            <label>Year</label>
+            <input type="number" id="atVehicleYear" min="1990" max="2030" placeholder="2022">
+          </div>
+          <div class="form-group">
+            <label>License Plate</label>
+            <input type="text" id="atVehiclePlate" placeholder="ABC1234">
+          </div>
+          <div class="form-group">
+            <label>Plate State</label>
+            <select id="atPlateState">
+              <option value="">— State —</option>
+              <option value="AL">AL</option><option value="AK">AK</option><option value="AZ">AZ</option><option value="AR">AR</option>
+              <option value="CA">CA</option><option value="CO">CO</option><option value="CT">CT</option><option value="DE">DE</option>
+              <option value="FL">FL</option><option value="GA">GA</option><option value="HI">HI</option><option value="ID">ID</option>
+              <option value="IL">IL</option><option value="IN">IN</option><option value="IA">IA</option><option value="KS">KS</option>
+              <option value="KY">KY</option><option value="LA">LA</option><option value="ME">ME</option><option value="MD">MD</option>
+              <option value="MA">MA</option><option value="MI">MI</option><option value="MN">MN</option><option value="MS">MS</option>
+              <option value="MO">MO</option><option value="MT">MT</option><option value="NE">NE</option><option value="NV">NV</option>
+              <option value="NH">NH</option><option value="NJ">NJ</option><option value="NM">NM</option><option value="NY">NY</option>
+              <option value="NC">NC</option><option value="ND">ND</option><option value="OH">OH</option><option value="OK">OK</option>
+              <option value="OR">OR</option><option value="PA">PA</option><option value="RI">RI</option><option value="SC">SC</option>
+              <option value="SD">SD</option><option value="TN">TN</option><option value="TX">TX</option><option value="UT">UT</option>
+              <option value="VT">VT</option><option value="VA">VA</option><option value="WA">WA</option><option value="WV">WV</option>
+              <option value="WI">WI</option><option value="WY">WY</option><option value="DC">DC</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Vehicle Type</label>
+            <select id="atVehicleType">
+              <option value="Semi Truck">Semi Truck</option>
+              <option value="Box Truck">Box Truck</option>
+              <option value="Class A RV">Class A RV</option>
+              <option value="Class B RV">Class B RV</option>
+              <option value="Class C RV">Class C RV</option>
+              <option value="Travel Trailer">Travel Trailer</option>
+              <option value="Fifth Wheel">Fifth Wheel</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equipment Numbers -->
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:10px;">Equipment Numbers</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="form-group">
+            <label>Truck #</label>
+            <input type="text" id="atTruckNumber" placeholder="TK-2281">
+          </div>
+          <div class="form-group">
+            <label>Trailer #</label>
+            <input type="text" id="atTrailerNumber" placeholder="TR-4411">
+          </div>
+        </div>
+      </div>
+
+      <!-- Insurance Documents -->
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:10px;">Insurance Documents</div>
+        <div class="form-group">
+          <label>Upload Insurance Document</label>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0;">
+              <i class="fas fa-upload"></i> Choose File
+              <input type="file" id="atInsuranceFile" accept="image/*,.pdf" style="display:none;">
+            </label>
+            <button type="button" class="btn btn-secondary btn-sm" id="atScanBtn" style="display:none;">
+              <i class="fas fa-magic"></i> Scan &amp; Auto-Fill
+            </button>
+            <span id="atInsuranceFileName" style="font-size:0.82rem;color:var(--gray-500);">No file selected</span>
+          </div>
+          <div id="atInsurancePreview" style="margin-top:8px;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+          <div class="form-group">
+            <label>Policy Number</label>
+            <input type="text" id="atInsurancePolicy" placeholder="POL-123456">
+          </div>
+          <div class="form-group">
+            <label>Insurance Company</label>
+            <input type="text" id="atInsuranceCompany" placeholder="Progressive Commercial">
+          </div>
+          <div class="form-group">
+            <label>Expiration Date</label>
+            <input type="date" id="atInsuranceExpDate">
+          </div>
+        </div>
+      </div>
+
+      <!-- Auto-Renewal -->
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:10px;">Auto-Renewal</div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;">
+          <input type="checkbox" id="atAutoRenew" style="width:16px;height:16px;accent-color:var(--teal);cursor:pointer;">
+          <span style="font-size:0.875rem;font-weight:600;color:var(--navy);">Enable Auto-Renewal</span>
+        </label>
+        <div id="atAutoRenewFields" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-group">
+              <label>Renewal Period</label>
+              <select id="atRenewalPeriod">
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="annually">Annually</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Renewal Rate ($) <span style="color:var(--gray-400);font-weight:400;font-size:0.75rem;">(blank = monthly rate)</span></label>
+              <input type="number" id="atRenewalRate" min="0" step="0.01" placeholder="Same as monthly rate">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Method -->
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:10px;">Payment Method</div>
+        <div class="form-group">
+          <label>Billing Method</label>
+          <select id="atPaymentMethod">
+            <option value="manual">Manual</option>
+            <option value="autopay">Auto-Pay (Card on File)</option>
+          </select>
+        </div>
+        <div id="atAutopayFields" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="form-group">
+              <label>Card Last 4 Digits</label>
+              <input type="text" id="atAutopayCard" maxlength="4" placeholder="4242" pattern="[0-9]{4}">
+            </div>
+            <div class="form-group">
+              <label>Next Payment Date</label>
+              <input type="date" id="atAutopayNextDate">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn btn-secondary" id="cancelAddTenantModal">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Tenant</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Message Compose Modal ────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="msgModal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Send Message</h3>
+      <button class="modal-close" id="closeMsgModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="background:var(--gray-50);border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:0.82rem;">
+      <span style="color:var(--gray-400);font-weight:600;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;">To:</span>
+      <span id="msgToName" style="font-weight:700;color:var(--navy);margin-left:6px;"></span>
+      <span id="msgToEmail" style="color:var(--gray-400);margin-left:6px;"></span>
+    </div>
+    <div class="form-group">
+      <label>Subject *</label>
+      <input type="text" id="msgSubject" placeholder="e.g. Upcoming payment reminder">
+    </div>
+    <div class="form-group">
+      <label>Message *</label>
+      <textarea id="msgBody" rows="6" placeholder="Type your message here..." style="width:100%;resize:vertical;padding:10px;border:1px solid var(--gray-200);border-radius:6px;font-family:Inter,sans-serif;font-size:0.875rem;"></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
+      <button type="button" class="btn btn-secondary" id="cancelMsgModal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="sendMsgBtn"><i class="fas fa-paper-plane"></i> Send Message</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Import Tenants Modal ──────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="importModal">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-file-import" style="margin-right:8px;color:var(--teal);"></i>Import Tenants from Excel / CSV</h3>
+      <button class="modal-close" id="closeImportModal"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- Step 1: File picker -->
+    <div id="importStep1">
+      <div style="border:2px dashed var(--gray-200);border-radius:10px;padding:36px;text-align:center;cursor:pointer;transition:border-color 0.2s;" id="importDropZone">
+        <i class="fas fa-cloud-upload-alt" style="font-size:2.5rem;color:var(--teal);margin-bottom:12px;display:block;"></i>
+        <div style="font-weight:700;color:var(--navy);margin-bottom:6px;">Drop your file here or click to browse</div>
+        <div style="font-size:0.8rem;color:var(--gray-400);margin-bottom:16px;">Supports .xlsx, .xls, and .csv files</div>
+        <label class="btn btn-secondary" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+          <i class="fas fa-folder-open"></i> Choose File
+          <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+        </label>
+      </div>
+      <div style="margin-top:14px;padding:12px 14px;background:var(--gray-50);border-radius:6px;font-size:0.78rem;color:var(--gray-500);">
+        <i class="fas fa-info-circle" style="color:var(--teal);margin-right:6px;"></i>
+        The importer auto-detects columns for <strong>Name, Email, Phone, Spot #, Vehicle, License Plate, Date In/Out, and Term</strong>.
+        Works with the <em>RT 27 Lot</em> format and most standard spreadsheet layouts.
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn btn-secondary" id="cancelImportModal">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Preview & confirm -->
+    <div id="importStep2" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+        <div class="form-group" style="margin:0;flex:1;min-width:180px;">
+          <label style="margin-bottom:4px;display:block;">Sheet</label>
+          <select id="importSheetSel" class="cmd-yard-select" style="width:100%;"></select>
+        </div>
+        <div style="flex:2;min-width:200px;font-size:0.82rem;color:var(--gray-500);" id="importCountSummary"></div>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:6px;">Column Mapping</div>
+        <div id="importColMapping"></div>
+      </div>
+
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:6px;">Preview (first 8 rows)</div>
+      <div class="table-wrapper" style="max-height:280px;overflow-y:auto;margin-bottom:14px;">
+        <table id="importPreviewTable" style="font-size:0.78rem;"></table>
+      </div>
+
+      <div style="padding:10px 14px;background:#fef3c7;border-radius:6px;font-size:0.78rem;color:#92400e;margin-bottom:14px;">
+        <i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>
+        Duplicate entries (same name + spot number) will be skipped. Rows without a name are skipped. All imported tenants start with rate $0 — edit each to set their rate.
+      </div>
+
+      <div style="display:flex;justify-content:space-between;gap:10px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn btn-secondary" id="importBackBtn"><i class="fas fa-arrow-left"></i> Back</button>
+        <button type="button" class="btn btn-primary" id="importConfirmBtn"><i class="fas fa-file-import"></i> Import Tenants</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="js/receipts.js"></script>
+<script src="js/reservations.js"></script>
+<script src="js/import.js"></script>
+</body>
+</html>

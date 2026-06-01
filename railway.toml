@@ -1,0 +1,15 @@
+# YardBoss — Railway config for BACKEND deployment
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "YARDBOSS_ENV=production node server.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[environments.production]
+variables = { NODE_ENV = "production", YARDBOSS_ENV = "production" }
+
+[environments.sandbox]
+variables = { NODE_ENV = "development", YARDBOSS_ENV = "sandbox" }

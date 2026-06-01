@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dev Tracker — YardBoss</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<!-- Command Strip -->
+<div class="cmd-strip">
+  <span class="cmd-title"><i class="fas fa-code" style="color:var(--teal);margin-right:6px;"></i>Dev Tracker</span>
+  <span style="font-size:0.72rem;background:rgba(0,180,160,0.18);color:#00b4a0;padding:2px 8px;border-radius:99px;font-weight:700;letter-spacing:0.5px;">PRIVATE</span>
+  <div class="cmd-divider"></div>
+  <!-- Type filters -->
+  <div style="display:flex;gap:4px;" id="typeFilters">
+    <button class="dev-filter-btn active" data-type="all">All</button>
+    <button class="dev-filter-btn" data-type="feature"><i class="fas fa-plus-circle"></i> Feature</button>
+    <button class="dev-filter-btn" data-type="improve"><i class="fas fa-arrow-up"></i> Improve</button>
+    <button class="dev-filter-btn" data-type="bug"><i class="fas fa-bug"></i> Bug</button>
+    <button class="dev-filter-btn" data-type="remove"><i class="fas fa-minus-circle"></i> Remove</button>
+  </div>
+  <div class="cmd-divider"></div>
+  <!-- Status filters -->
+  <div style="display:flex;gap:4px;" id="statusFilters">
+    <button class="dev-filter-btn active" data-status="all">All Status</button>
+    <button class="dev-filter-btn" data-status="pending">Pending</button>
+    <button class="dev-filter-btn" data-status="in_progress">In Progress</button>
+    <button class="dev-filter-btn" data-status="done">Done</button>
+    <button class="dev-filter-btn" data-status="cancelled">Cancelled</button>
+  </div>
+  <div class="cmd-actions">
+    <input type="text" id="devSearch" placeholder="Search..." class="cmd-yard-select" style="min-width:180px;">
+    <button class="cmd-btn" id="devExportBtn"><i class="fas fa-download"></i> Export</button>
+    <button class="cmd-btn primary" id="newItemBtn"><i class="fas fa-plus"></i> New Item</button>
+  </div>
+</div>
+
+<!-- Page Content -->
+<main class="page-content">
+
+  <!-- KPI Strip -->
+  <div class="dev-kpi-strip" id="devKpiStrip"></div>
+
+  <!-- Items List -->
+  <div id="devItemsList"></div>
+
+</main>
+
+<!-- ── Add / Edit Modal ──────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="devModal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="devModalTitle">New Item</h3>
+      <button class="modal-close" id="closeDevModal"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="devForm">
+      <div class="form-group">
+        <label>Title *</label>
+        <input type="text" id="devTitle" placeholder="Brief description of the feature, bug, or task" required>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label>Type *</label>
+          <select id="devType">
+            <option value="feature">+ Feature</option>
+            <option value="improve">↑ Improve</option>
+            <option value="bug">⚠ Bug</option>
+            <option value="remove">✕ Remove</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Priority *</label>
+          <select id="devPriority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status *</label>
+          <select id="devStatus">
+            <option value="pending" selected>Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="done">Done</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="devDescription" rows="3" placeholder="More detail — what should happen, what's broken, why it matters..." style="width:100%;resize:vertical;padding:10px;border:1px solid var(--gray-200);border-radius:6px;font-family:Inter,sans-serif;font-size:0.875rem;"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Tags <span style="font-weight:400;color:var(--gray-400);font-size:0.75rem;">(comma-separated)</span></label>
+        <input type="text" id="devTags" placeholder="e.g. dashboard, import, tenants, payments">
+      </div>
+      <div class="form-group">
+        <label>Notes <span style="font-weight:400;color:var(--gray-400);font-size:0.75rem;">(internal)</span></label>
+        <textarea id="devNotes" rows="2" placeholder="Claude session notes, PR references, screenshots..." style="width:100%;resize:vertical;padding:10px;border:1px solid var(--gray-200);border-radius:6px;font-family:Inter,sans-serif;font-size:0.875rem;"></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn btn-secondary" id="cancelDevModal">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+/* ── Dev Tracker Page Styles ─────────────────────────────────────────── */
+.dev-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.dev-kpi-card {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  border: 1px solid var(--gray-100);
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.dev-kpi-card:hover { box-shadow: var(--shadow); }
+.dev-kpi-card.active { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(0,180,160,0.15); }
+.dev-kpi-card-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-400); margin-bottom: 4px; }
+.dev-kpi-card-value { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+.dev-kpi-card-sub { font-size: 0.7rem; color: var(--gray-400); margin-top: 3px; }
+
+.dev-filter-btn {
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: Inter, sans-serif;
+  transition: all 0.15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.dev-filter-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.dev-filter-btn.active { background: rgba(255,255,255,0.25); color: #fff; border-color: rgba(255,255,255,0.3); }
+
+.dev-item {
+  background: #fff;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-100);
+  border-left-width: 4px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: start;
+  transition: box-shadow 0.15s;
+}
+.dev-item:hover { box-shadow: var(--shadow); }
+.dev-item.done { opacity: 0.55; }
+.dev-item.cancelled { opacity: 0.4; }
+
+.dev-item-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.dev-type-badge {
+  font-size: 0.68rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.5px; padding: 2px 7px; border-radius: 4px;
+}
+.dev-priority-badge {
+  font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+}
+.dev-item-title {
+  font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-bottom: 4px;
+}
+.dev-item-title.done-text { text-decoration: line-through; color: var(--gray-400); }
+.dev-item-desc { font-size: 0.82rem; color: var(--gray-500); margin-bottom: 8px; line-height: 1.5; }
+.dev-item-notes {
+  font-size: 0.75rem; color: var(--gray-400); background: var(--gray-50);
+  border-radius: 4px; padding: 6px 10px; margin-bottom: 8px; line-height: 1.5;
+  border-left: 3px solid var(--gray-200);
+}
+.dev-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.dev-tag {
+  font-size: 0.68rem; font-weight: 600; padding: 2px 7px;
+  background: var(--gray-100); color: var(--gray-500); border-radius: 99px;
+}
+.dev-item-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.dev-status-btn {
+  font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 4px;
+  border: none; cursor: pointer; font-family: Inter, sans-serif; white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.dev-status-btn:hover { opacity: 0.8; }
+.dev-item-date { font-size: 0.68rem; color: var(--gray-400); text-align: right; }
+.dev-action-btns { display: flex; gap: 5px; }
+
+.dev-empty {
+  text-align: center; padding: 60px 20px;
+  color: var(--gray-400);
+}
+.dev-empty i { font-size: 2.5rem; margin-bottom: 12px; display: block; color: var(--gray-200); }
+.dev-empty p { font-size: 0.9rem; }
+
+@media (max-width: 768px) {
+  .dev-kpi-strip { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 480px) {
+  .dev-kpi-strip { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+
+<script src="js/data.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="js/dev.js"></script>
+</body>
+</html>

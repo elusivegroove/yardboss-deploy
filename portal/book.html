@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book a Space — YardBoss</title>
+  <link rel="stylesheet" href="css/portal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<nav class="portal-nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"><i class="fas fa-truck"></i></div>
+    <span class="nav-logo-text">YardBoss</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html#lots" class="nav-link">Locations</a>
+    <a href="lookup.html" class="nav-link">My Reservation</a>
+    <a href="book.html" class="btn-nav active"><i class="fas fa-plus"></i> Book Now</a>
+  </div>
+</nav>
+
+<div style="background: white; border-bottom: 1px solid var(--gray-200); padding: 16px 24px;">
+  <div class="container">
+    <div style="display:flex; align-items:center; gap:8px; font-size:0.875rem; color:var(--gray-500);">
+      <a href="index.html" style="color:var(--teal); text-decoration:none;">Home</a>
+      <i class="fas fa-chevron-right" style="font-size:0.65rem;"></i>
+      <span>Book a Space</span>
+    </div>
+  </div>
+</div>
+
+<section class="section">
+  <div class="container">
+    <div class="booking-layout">
+
+      <!-- Left: Form -->
+      <div>
+        <div class="booking-card">
+          <h2>Reserve Your Space</h2>
+          <p class="subtitle">Complete the form below to secure your yard space. Takes less than 3 minutes.</p>
+
+          <!-- Step indicator -->
+          <div class="steps" id="stepsIndicator">
+            <div class="step active" data-step="1">
+              <div class="step-circle">1</div>
+              <span class="step-label">Lot & Type</span>
+            </div>
+            <div class="step" data-step="2">
+              <div class="step-circle">2</div>
+              <span class="step-label">Your Info</span>
+            </div>
+            <div class="step" data-step="3">
+              <div class="step-circle">3</div>
+              <span class="step-label">Vehicle</span>
+            </div>
+            <div class="step" data-step="4">
+              <div class="step-circle">4</div>
+              <span class="step-label">Payment</span>
+            </div>
+          </div>
+
+          <!-- Step 1: Lot & Space Type -->
+          <div id="step1" class="step-content">
+            <div class="form-section">
+              <h3>Select Location</h3>
+              <div class="form-row single">
+                <div class="form-group">
+                  <label>Yard Location *</label>
+                  <select id="lotSelect" required>
+                    <option value="">Choose a yard location...</option>
+                  </select>
+                </div>
+              </div>
+              <div id="lotInfo" class="hidden" style="margin-top:14px; padding:14px; background:var(--gray-50); border-radius:var(--radius-sm); font-size:0.85rem; color:var(--gray-600);">
+                <div id="lotInfoContent"></div>
+              </div>
+            </div>
+
+            <div class="form-section" id="spaceTypeSection" style="display:none">
+              <h3>Select Space Type</h3>
+              <div class="space-type-grid" id="spaceTypeGrid"></div>
+            </div>
+
+            <div class="form-section" id="dateSection" style="display:none">
+              <h3>Move-In Date</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Start Date *</label>
+                  <input type="date" id="startDate" required>
+                  <span class="form-hint">Lease runs for 12 months from this date</span>
+                </div>
+                <div class="form-group">
+                  <label>End Date</label>
+                  <input type="date" id="endDate" readonly style="background:var(--gray-50); cursor:not-allowed;">
+                </div>
+              </div>
+            </div>
+
+            <button class="btn-submit" id="nextStep1" style="display:none" onclick="goToStep(2)">
+              Continue <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+
+          <!-- Step 2: Contact Info -->
+          <div id="step2" class="step-content hidden">
+            <div class="form-section">
+              <h3>Contact Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Full Name *</label>
+                  <input type="text" id="tenantName" placeholder="James Rivera" required>
+                </div>
+                <div class="form-group">
+                  <label>Company Name</label>
+                  <input type="text" id="company" placeholder="Big Haul Freight LLC">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Email Address *</label>
+                  <input type="email" id="email" placeholder="you@company.com" required>
+                </div>
+                <div class="form-group">
+                  <label>Phone Number *</label>
+                  <input type="tel" id="phone" placeholder="(713) 555-0100" required>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:12px;">
+              <button class="btn-back" onclick="goToStep(1)"><i class="fas fa-arrow-left"></i> Back</button>
+              <button class="btn-submit" style="flex:1;" onclick="goToStep(3)">Continue <i class="fas fa-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <!-- Step 3: Vehicle Info -->
+          <div id="step3" class="step-content hidden">
+            <div class="form-section">
+              <h3>Vehicle Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Make *</label>
+                  <input type="text" id="vehicleMake" placeholder="Freightliner" required>
+                </div>
+                <div class="form-group">
+                  <label>Model *</label>
+                  <input type="text" id="vehicleModel" placeholder="Cascadia" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Year</label>
+                  <input type="number" id="vehicleYear" placeholder="2022" min="1990" max="2026">
+                </div>
+                <div class="form-group">
+                  <label>License Plate *</label>
+                  <input type="text" id="vehiclePlate" placeholder="TX-HVY1234" required>
+                  <span class="form-hint">State + plate number</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:12px;">
+              <button class="btn-back" onclick="goToStep(2)"><i class="fas fa-arrow-left"></i> Back</button>
+              <button class="btn-submit" style="flex:1;" onclick="proceedToPayment()">Review & Pay <i class="fas fa-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <!-- Step 4: Payment -->
+          <div id="step4" class="step-content hidden">
+            <div class="form-section">
+              <h3>Review Your Booking</h3>
+              <div id="reviewSummary" style="background:var(--gray-50); border-radius:var(--radius-sm); padding:16px; margin-bottom:20px; font-size:0.875rem;"></div>
+            </div>
+            <div class="form-section">
+              <h3>Payment</h3>
+              <div class="stripe-mock-notice" id="mockNotice">
+                <i class="fas fa-info-circle" style="margin-top:2px; flex-shrink:0;"></i>
+                <div><strong>Sandbox Mode:</strong> No real payment will be charged. Add Stripe keys to <code>.env.sandbox</code> to process live payments.</div>
+              </div>
+              <div id="stripe-element-container">
+                <!-- Stripe Elements mounts here, or mock card form -->
+                <div id="mockCardForm">
+                  <div class="form-row">
+                    <div class="form-group" style="grid-column:1/-1">
+                      <label>Card Number</label>
+                      <input type="text" placeholder="4242 4242 4242 4242" maxlength="19" id="mockCard" oninput="formatCard(this)">
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Expiry</label>
+                      <input type="text" placeholder="MM / YY" maxlength="7" id="mockExpiry" oninput="formatExpiry(this)">
+                    </div>
+                    <div class="form-group">
+                      <label>CVC</label>
+                      <input type="text" placeholder="123" maxlength="4" id="mockCvc">
+                    </div>
+                  </div>
+                </div>
+                <div id="stripeElements" class="hidden"></div>
+              </div>
+              <p style="font-size:0.75rem; color:var(--gray-400); margin-top:10px; display:flex; align-items:center; gap:6px;">
+                <i class="fas fa-lock"></i> Secured by Stripe. We never store your card details.
+              </p>
+            </div>
+            <div style="display:flex; gap:12px;">
+              <button class="btn-back" onclick="goToStep(3)"><i class="fas fa-arrow-left"></i> Back</button>
+              <button class="btn-submit" id="payBtn" style="flex:1;" onclick="submitPayment()">
+                <i class="fas fa-lock"></i> <span id="payBtnText">Pay & Reserve</span>
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /booking-card -->
+      </div><!-- /left -->
+
+      <!-- Right: Summary -->
+      <div>
+        <div class="summary-card" id="summaryCard">
+          <h3><i class="fas fa-receipt" style="color:var(--teal);margin-right:8px;"></i>Booking Summary</h3>
+          <div class="summary-lot-img" id="summaryImg">
+            <i class="fas fa-warehouse" style="font-size:2rem; color:rgba(255,255,255,0.2);"></i>
+          </div>
+          <div id="summaryContent">
+            <div class="summary-row">
+              <span class="summary-label">Location</span>
+              <span class="summary-value" id="sumLot">—</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Space Type</span>
+              <span class="summary-value" id="sumType">—</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Start Date</span>
+              <span class="summary-value" id="sumStart">—</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Lease Term</span>
+              <span class="summary-value">12 months</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Monthly Rate</span>
+              <span class="summary-value" id="sumRate">—</span>
+            </div>
+          </div>
+          <div class="summary-total">
+            <div class="summary-total-row">
+              <span class="summary-total-label">Due Today</span>
+              <span class="summary-total-value" id="sumDue">—</span>
+            </div>
+          </div>
+          <p class="summary-note">First month's rent due now. Subsequent months billed on the same date each month. Cancel anytime with 30 days' notice.</p>
+        </div>
+      </div>
+
+    </div><!-- /booking-layout -->
+  </div>
+</section>
+
+<footer class="portal-footer">
+  <div class="footer-logo"><i class="fas fa-truck"></i> YardBoss</div>
+  <p>Questions? Call <a href="tel:+17135550142">(713) 555-0142</a> or email <a href="mailto:info@yardboss.com">info@yardboss.com</a></p>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/portal.js"></script>
+<script src="js/book.js"></script>
+</body>
+</html>

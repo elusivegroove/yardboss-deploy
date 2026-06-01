@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Access Control — YardBoss</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/charts.css">
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<!-- Command Strip -->
+<div class="cmd-strip">
+  <span class="cmd-title"><i class="fas fa-shield-alt" style="color:var(--teal);margin-right:6px;"></i>Access Control</span>
+  <div class="cmd-divider"></div>
+  <select id="lotFilter" class="cmd-yard-select">
+    <option value="all">All Yards</option>
+    <option value="lot-1">TransVega</option>
+  </select>
+  <select id="statusFilter" class="cmd-yard-select">
+    <option value="all">All Status</option>
+    <option value="online">Online</option>
+    <option value="offline">Offline</option>
+  </select>
+  <div class="cmd-actions">
+    <button class="cmd-btn primary" id="addGateBtn"><i class="fas fa-plus"></i> Add Gate</button>
+  </div>
+</div>
+
+<!-- Page Content -->
+<main class="page-content">
+
+  <div class="card">
+    <div class="table-wrapper">
+      <table id="gatesTable">
+        <thead>
+          <tr>
+            <th>Gate ID</th>
+            <th>Lot Name</th>
+            <th>Gate Name</th>
+            <th>Device ID</th>
+            <th>Status</th>
+            <th>Last Ping</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="gatesTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- Add/Edit Gate Modal -->
+<div class="modal-backdrop" id="gateModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="gateModalTitle">Add Gate</h3>
+      <button class="modal-close" id="closeGateModal"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="gateForm">
+      <div class="settings-grid">
+        <div class="form-group">
+          <label>Gate ID</label>
+          <input type="text" id="gateIdInput" placeholder="e.g. GATE-006" required>
+        </div>
+        <div class="form-group">
+          <label>Gate Name</label>
+          <input type="text" id="gateNameInput" placeholder="e.g. Main Entrance" required>
+        </div>
+        <div class="form-group">
+          <label>Lot</label>
+          <select id="gateLotInput">
+            <option value="lot-1">TransVega RV and Truck Center</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Device ID</label>
+          <input type="text" id="gateDeviceInput" placeholder="e.g. DEV-XX-001" required>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="gateStatusInput">
+            <option value="online">Online</option>
+            <option value="offline">Offline</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelGateModal">Cancel</button>
+        <button type="submit" class="btn-primary">Save Gate</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="js/access.js"></script>
+</body>
+</html>

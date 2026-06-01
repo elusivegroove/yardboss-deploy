@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Lots — YardBoss</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/charts.css">
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<div class="cmd-strip">
+  <span class="cmd-title"><i class="fas fa-warehouse" style="color:var(--teal);margin-right:6px;"></i>Manage Lots</span>
+  <div class="cmd-divider"></div>
+  <input type="text" id="lotSearch" placeholder="Search lots..." class="cmd-yard-select" style="min-width:200px;">
+  <select id="perPageSelect" class="cmd-yard-select">
+    <option value="25">25 / page</option>
+    <option value="50">50 / page</option>
+    <option value="100">100 / page</option>
+  </select>
+  <div class="cmd-actions">
+    <button class="cmd-btn primary" id="addLotBtn"><i class="fas fa-plus"></i> New Lot</button>
+  </div>
+</div>
+
+<main class="page-content">
+  <div class="card">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Lot Name</th>
+            <th>Address</th>
+            <th>Total Spaces</th>
+            <th>Occupancy</th>
+            <th>Amenities</th>
+            <th>Status</th>
+            <th>Manage</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="lotsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- ── Spaces Modal ──────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="spacesModal">
+  <div class="modal" style="max-width:780px;">
+    <div class="modal-header">
+      <h3 id="spacesModalTitle" class="modal-title">Space Map</h3>
+      <button class="modal-close" id="closeSpacesModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="space-legend" style="display:flex;gap:20px;margin-bottom:14px;font-size:0.82rem;color:var(--gray-600);">
+      <span><span style="display:inline-block;width:12px;height:12px;background:#d1fae5;border:1px solid #6ee7b7;border-radius:3px;margin-right:5px;vertical-align:middle;"></span><span id="legendOccupied">Occupied (0)</span></span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:3px;margin-right:5px;vertical-align:middle;"></span><span id="legendReserved">Reserved (0)</span></span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;margin-right:5px;vertical-align:middle;"></span><span id="legendVacant">Vacant (0)</span></span>
+    </div>
+    <div style="font-size:0.75rem;color:var(--gray-400);margin-bottom:10px;">R- = RV spaces &nbsp;|&nbsp; T- = Truck/Commercial spaces. Hover a space to see tenant name.</div>
+    <div class="space-grid" id="spaceGrid"></div>
+  </div>
+</div>
+
+<!-- ── Add / Edit Lot Modal ──────────────────────────────────────────── -->
+<div class="modal-backdrop" id="editLotModal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="editLotTitle" class="modal-title">Add New Lot</h3>
+      <button class="modal-close" id="closeEditModal"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="editLotForm">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Lot / Facility Name *</label>
+          <input type="text" id="editLotName" placeholder="e.g. TransVega RV and Truck Center" required>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Street Address *</label>
+          <input type="text" id="editLotAddress" placeholder="7406 HWY 27 North" required>
+        </div>
+        <div class="form-group">
+          <label>City *</label>
+          <input type="text" id="editLotCity" placeholder="Sebring" required>
+        </div>
+        <div class="form-group">
+          <label>State</label>
+          <input type="text" id="editLotState" placeholder="FL" maxlength="2" style="text-transform:uppercase;">
+        </div>
+        <div class="form-group">
+          <label>ZIP Code</label>
+          <input type="text" id="editLotZip" placeholder="33870" maxlength="10">
+        </div>
+        <div class="form-group">
+          <label>Total Spaces *</label>
+          <input type="number" id="editLotSpaces" min="1" max="9999" placeholder="140" required>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="editLotStatus">
+            <option value="active">Active</option>
+            <option value="pending">Pending</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:6px;">
+        <label>Amenities</label>
+        <div id="amenityCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="24/7 Gated Access"> 24/7 Gated Access</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Security Cameras"> Security Cameras</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Full Hookups (30/50 Amp)"> Full Hookups (30/50 Amp)</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Water & Sewer"> Water & Sewer</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="WiFi Available"> WiFi Available</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Dump Station"> Dump Station</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Truck Wash Bay"> Truck Wash Bay</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Restrooms"> Restrooms</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Laundry"> Laundry</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="On-Site Manager"> On-Site Manager</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Paved Surfaces"> Paved Surfaces</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Lighting"> Lighting</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Weigh Station"> Weigh Station</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Fuel Station"> Fuel Station</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;font-weight:400;cursor:pointer;"><input type="checkbox" value="Pool"> Pool</label>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn btn-secondary" id="cancelEditModal">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Lot</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Rent Roll Modal ───────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="rentRollModal">
+  <div class="modal" style="max-width:860px;">
+    <div class="modal-header">
+      <h3 id="rentRollTitle" class="modal-title">Rent Roll</h3>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-secondary btn-sm" id="rentRollExportBtn"><i class="fas fa-download"></i> Export CSV</button>
+        <button class="modal-close" id="closeRentRollModal"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+    <div id="rentRollSummary"></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Tenant</th><th>Space</th><th>Type</th><th>Rate/Mo</th><th>Start</th><th>End</th><th>Last Payment</th><th>Status</th></tr></thead>
+        <tbody id="rentRollTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── QR Code Modal ────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="qrModal">
+  <div class="modal" style="max-width:400px;text-align:center;">
+    <div class="modal-header">
+      <h3 id="qrModalTitle" class="modal-title">QR Code</h3>
+      <button class="modal-close" id="closeQRModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="qrCodeDisplay" style="margin:16px 0;"></div>
+    <div style="margin:12px 0;">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Lot</div>
+      <div id="qrLotName" style="font-weight:700;color:var(--navy);"></div>
+      <div id="qrAddress" style="font-size:0.82rem;color:var(--gray-500);margin-top:2px;"></div>
+    </div>
+    <div style="background:var(--gray-50);border-radius:6px;padding:10px 14px;margin:12px 0;word-break:break-all;">
+      <div style="font-size:0.7rem;color:var(--gray-400);margin-bottom:3px;">Booking Portal URL</div>
+      <a id="qrUrl" href="#" target="_blank" style="font-size:0.78rem;color:var(--teal);font-weight:600;text-decoration:none;"></a>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="window.print()"><i class="fas fa-print"></i> Print QR Code</button>
+  </div>
+</div>
+
+<!-- ── Preview Modal ────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="previewModal">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-header">
+      <h3 id="previewModalTitle" class="modal-title">Public Listing Preview</h3>
+      <button class="modal-close" id="closePreviewModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="previewContent"></div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="js/lots.js"></script>
+</body>
+</html>
