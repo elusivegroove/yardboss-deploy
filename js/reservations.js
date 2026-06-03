@@ -420,7 +420,7 @@ function openEditTenantModal(tenantId) {
   document.getElementById('addTenantModal').classList.add('open');
 }
 
-function handleAddTenantSubmit(e) {
+async function handleAddTenantSubmit(e) {
   e.preventDefault();
   var form   = document.getElementById('addTenantForm');
   var editId = form.dataset.tenantId;
@@ -466,43 +466,38 @@ function handleAddTenantSubmit(e) {
 
   var initials = name.split(' ').map(function(p){ return p[0]; }).join('').toUpperCase().slice(0,2);
 
-  if (editId) {
-    var t = getTenant(editId);
-    if (t) {
-      t.name=name; t.email=email; t.phone=phone; t.company=company; t.initials=initials;
-      t.lotId=lotId; t.spaceNumber=space; t.monthlyRate=rate;
-      t.startDate=start; t.endDate=end; t.status=status;
-      t.vehicle={ make:vMake, model:vModel, year:vYear, plate:vPlate, type:vType };
-      t.plateState=plateState;
-      t.truckNumber=truckNumber; t.trailerNumber=trailerNumber;
-      if (insuranceDoc) t.insuranceDoc=insuranceDoc;
-      t.insurancePolicyNumber=insurancePolicyNumber;
-      t.insuranceCompany=insuranceCompany;
-      t.insuranceExpDate=insuranceExpDate;
-      t.autoRenew=autoRenew; t.renewalPeriod=renewalPeriod; t.renewalRate=renewalRate;
-      t.paymentMethod=paymentMethod; t.autopayCard=autopayCard; t.autopayNextDate=autopayNextDate;
-      showToast('Tenant updated: '+name, 'success');
+  var tenantData = {
+    name:name, email:email, phone:phone, company:company, initials:initials,
+    lotId:lotId, spaceNumber:space, monthlyRate:rate,
+    startDate:start, endDate:end, status:status,
+    vehicle:{ make:vMake, model:vModel, year:vYear, plate:vPlate, type:vType },
+    plateState:plateState, truckNumber:truckNumber, trailerNumber:trailerNumber,
+    insurancePolicyNumber:insurancePolicyNumber, insuranceCompany:insuranceCompany,
+    insuranceExpDate:insuranceExpDate,
+    autoRenew:autoRenew, renewalPeriod:renewalPeriod, renewalRate:renewalRate,
+    paymentMethod:paymentMethod, autopayCard:autopayCard, autopayNextDate:autopayNextDate
+  };
+  if (editId) tenantData.id = editId;
+  if (insuranceDoc) tenantData.insuranceDoc = insuranceDoc;
+
+  try {
+    var saved = await YB.saveTenant(tenantData);
+    // Reload fresh tenant list from API
+    var tenants = await YB.loadTenants();
+    APP_DATA.tenants = tenants;
+    showToast(editId ? 'Tenant updated: '+name : 'Tenant added: '+name, 'success');
+  } catch (err) {
+    // Fallback: update local state only
+    if (editId) {
+      var t = getTenant(editId);
+      if (t) Object.assign(t, tenantData);
+    } else {
+      tenantData.id = generateId('t');
+      tenantData.registrationStatus = 'pending';
+      tenantData.payments = [];
+      APP_DATA.tenants.push(tenantData);
     }
-  } else {
-    APP_DATA.tenants.push({
-      id: generateId('t'), name:name, initials:initials, email:email, phone:phone,
-      company:company, lotId:lotId, spaceNumber:space, monthlyRate:rate,
-      startDate:start, endDate:end, status:status, registrationStatus:'pending',
-      vehicle:{ make:vMake, model:vModel, year:vYear, plate:vPlate, type:vType },
-      plateState:plateState, truckNumber:truckNumber, trailerNumber:trailerNumber,
-      insuranceDoc:insuranceDoc, insurancePolicyNumber:insurancePolicyNumber,
-      insuranceCompany:insuranceCompany, insuranceExpDate:insuranceExpDate,
-      autoRenew:autoRenew, renewalPeriod:renewalPeriod, renewalRate:renewalRate,
-      paymentMethod:paymentMethod, autopayCard:autopayCard, autopayNextDate:autopayNextDate,
-      payments:[]
-    });
-    fetch('/api/reservations',{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ lotId, spaceType:vType, tenantName:name, email, phone, company,
-        vehicleMake:vMake, vehicleModel:vModel, vehicleYear:vYear, vehiclePlate:vPlate,
-        startDate:start, monthlyRate:rate })
-    }).catch(function(){});
-    showToast('Tenant added: '+name, 'success');
+    showToast((editId ? 'Tenant updated' : 'Tenant added')+' (offline)', 'warning');
   }
 
   document.getElementById('addTenantModal').classList.remove('open');
@@ -531,7 +526,17 @@ function exportTenants() {
 }
 
 // ── DOMContentLoaded ──────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+  // Load tenants and lots from API; fall back to static APP_DATA on failure
+  try {
+    var tenants = await YB.loadTenants();
+    APP_DATA.tenants = tenants;
+    var lots = await YB.loadLots();
+    if (lots && lots.length) APP_DATA.lots = lots;
+  } catch (err) {
+    console.warn('[YardBoss] API unavailable, using static data:', err.message);
+  }
+
   updateTabCounts();
   renderTenantsTable();
 

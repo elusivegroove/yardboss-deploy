@@ -5,3 +5,4 @@ routes/
 *.log
 railway.toml
 package-lock.json
+package.json

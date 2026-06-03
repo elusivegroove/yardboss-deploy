@@ -7,3 +7,5 @@ node_modules/
 dist/
 .vercel/
 scripts/tenants-output.json
+
+.vercel

@@ -454,7 +454,19 @@ function renderAll(filter) {
   renderUpcomingReservations(filter);
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
+  // Load live data from API; fall back to static APP_DATA on failure
+  if (typeof YB !== 'undefined') {
+    try {
+      var tenants = await YB.loadTenants();
+      APP_DATA.tenants = tenants;
+      var lots = await YB.loadLots();
+      if (lots && lots.length) APP_DATA.lots = lots;
+    } catch (err) {
+      console.warn('[YardBoss] API unavailable, using static data:', err.message);
+    }
+  }
+
   initGreeting();
   renderAll('all');
 

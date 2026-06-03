@@ -48,6 +48,7 @@ const paymentsRouter = require('./routes/payments');
 const reservationsRouter = require('./routes/reservations');
 const portalRouter = require('./routes/portal');
 const lotsRouter = require('./routes/lots');
+const tenantsRouter = require('./routes/tenants');
 const scanInsuranceRouter = require('./routes/scan-insurance');
 const sendReceiptRouter = require('./routes/send-receipt');
 
@@ -55,6 +56,7 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/reservations', reservationsRouter);
 app.use('/api/portal', portalRouter);
 app.use('/api/lots', lotsRouter);
+app.use('/api/tenants', tenantsRouter);
 app.use('/api/scan-insurance', scanInsuranceRouter);
 app.use('/api/send-receipt', sendReceiptRouter);
 // Required env vars: ANTHROPIC_API_KEY, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE
@@ -97,6 +99,11 @@ app.use((err, req, res, next) => {
     env: ENV,
   });
 });
+
+// ─── DB Migrations (runs on every startup, idempotent) ────────────────────────
+if (process.env.DATABASE_URL) {
+  require('./scripts/migrate').runMigrations().catch(console.error);
+}
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
