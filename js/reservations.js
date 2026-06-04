@@ -55,10 +55,13 @@ function renderTenantsTable() {
     var autopayBadge = t.paymentMethod === 'autopay'
       ? ' <span class="badge badge-teal" style="font-size:0.65rem;"><i class="fas fa-credit-card" style="margin-right:2px;"></i>AutoPay</span>'
       : '';
+    var walkInBadge = t.walkIn
+      ? ' <span class="badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;font-size:0.62rem;"><i class="fas fa-bolt" style="margin-right:2px;"></i>Walk-In</span>'
+      : '';
     return '<tr style="cursor:pointer;" onclick="openTenantPanel(\''+t.id+'\')">'
       +'<td><div style="display:flex;align-items:center;gap:10px;">'
       +'<div style="width:34px;height:34px;border-radius:50%;background:'+color+';color:white;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;">'+t.initials+'</div>'
-      +'<div><div style="font-weight:600;color:var(--navy);">'+t.name+'</div><div style="font-size:0.75rem;color:var(--gray-400);">'+t.company+'</div></div>'
+      +'<div><div style="font-weight:600;color:var(--navy);">'+t.name+walkInBadge+'</div><div style="font-size:0.75rem;color:var(--gray-400);">'+t.company+'</div></div>'
       +'</div></td>'
       +'<td>'+regBadge+'</td>'
       +'<td style="font-size:0.82rem;"><a href="mailto:'+t.email+'" style="color:var(--teal);text-decoration:none;" onclick="event.stopPropagation()">'+t.email+'</a></td>'
@@ -508,6 +511,68 @@ async function handleAddTenantSubmit(e) {
   if (_panelTenantId === editId) openTenantPanel(editId);
 }
 
+// ── Walk-In Check-In ──────────────────────────────────────────────────────
+function openWalkInModal() {
+  document.getElementById('walkInForm').reset();
+  var lotSel = document.getElementById('wiLotId');
+  lotSel.innerHTML = APP_DATA.lots.map(function(l){ return '<option value="'+l.id+'">'+l.name+'</option>'; }).join('');
+  document.getElementById('wiStart').value = new Date().toISOString().split('T')[0];
+  document.getElementById('walkInModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('wiName').focus(); }, 80);
+}
+
+async function handleWalkInSubmit(e) {
+  e.preventDefault();
+  var name       = document.getElementById('wiName').value.trim();
+  var phone      = document.getElementById('wiPhone').value.trim();
+  var company    = document.getElementById('wiCompany').value.trim();
+  var lotId      = document.getElementById('wiLotId').value;
+  var space      = document.getElementById('wiSpace').value.trim();
+  var rate       = parseFloat(document.getElementById('wiRate').value) || 0;
+  var start      = document.getElementById('wiStart').value;
+  var vType      = document.getElementById('wiVehicleType').value;
+  var plate      = document.getElementById('wiPlate').value.trim();
+  var plateState = document.getElementById('wiPlateState').value;
+  var payAmt     = parseFloat(document.getElementById('wiPayAmount').value) || 0;
+  var payMethod  = document.getElementById('wiPayMethod').value;
+
+  if (!name || !lotId || !space) {
+    showToast('Name, lot, and space are required.', 'error');
+    return;
+  }
+
+  var initials = name.split(' ').map(function(p){ return p[0]; }).join('').toUpperCase().slice(0,2);
+  var payments = [];
+  if (payAmt > 0 && payMethod !== 'none') {
+    payments.push({ date: start || new Date().toISOString().split('T')[0], amount: payAmt, status: 'paid', method: payMethod });
+  }
+
+  var tenantData = {
+    name: name, email: '', phone: phone, company: company, initials: initials,
+    lotId: lotId, spaceNumber: space, monthlyRate: rate,
+    startDate: start, endDate: '', status: 'active',
+    vehicle: { make: '', model: '', year: null, plate: plate, type: vType },
+    plateState: plateState, truckNumber: null, trailerNumber: null,
+    registrationStatus: 'pending', walkIn: true, payments: payments,
+    paymentMethod: 'manual'
+  };
+
+  try {
+    var saved = await YB.saveTenant(tenantData);
+    var tenants = await YB.loadTenants();
+    APP_DATA.tenants = tenants;
+    showToast('Walk-in checked in: '+name, 'success');
+  } catch (err) {
+    tenantData.id = generateId('t');
+    APP_DATA.tenants.push(tenantData);
+    showToast('Walk-in checked in: '+name+' (offline)', 'warning');
+  }
+
+  document.getElementById('walkInModal').classList.remove('open');
+  updateTabCounts();
+  renderTenantsTable();
+}
+
 // ── Export tenants CSV ────────────────────────────────────────────────────
 function exportTenants() {
   var list = getFilteredTenants();
@@ -560,6 +625,14 @@ document.addEventListener('DOMContentLoaded', async function() {
   var overlay = document.getElementById('panelOverlay');
   if (overlay) overlay.addEventListener('click', closeTenantPanel);
 
+  // Walk-In button
+  var walkInBtn = document.getElementById('walkInBtn');
+  if (walkInBtn) walkInBtn.addEventListener('click', openWalkInModal);
+  document.getElementById('walkInForm').addEventListener('submit', handleWalkInSubmit);
+  document.getElementById('closeWalkInModal').addEventListener('click', function(){ document.getElementById('walkInModal').classList.remove('open'); });
+  document.getElementById('cancelWalkInModal').addEventListener('click', function(){ document.getElementById('walkInModal').classList.remove('open'); });
+  document.getElementById('walkInModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+
   // Add tenant button
   var addBtn = document.getElementById('addTenantBtn');
   if (addBtn) addBtn.addEventListener('click', openAddTenantModal);
@@ -605,6 +678,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // Escape key
   document.addEventListener('keydown', function(e) {
-    if (e.key==='Escape') closeTenantPanel();
+    if (e.key==='Escape') {
+      closeTenantPanel();
+      document.getElementById('walkInModal').classList.remove('open');
+    }
   });
 });
