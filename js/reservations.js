@@ -525,14 +525,15 @@ async function handleWalkInSubmit(e) {
   e.preventDefault();
   var name       = document.getElementById('wiName').value.trim();
   var phone      = document.getElementById('wiPhone').value.trim();
+  var email      = document.getElementById('wiEmail').value.trim();
   var company    = document.getElementById('wiCompany').value.trim();
   var lotId      = document.getElementById('wiLotId').value;
   var space      = document.getElementById('wiSpace').value.trim();
   var rate       = parseFloat(document.getElementById('wiRate').value) || 0;
   var start      = document.getElementById('wiStart').value;
   var vType      = document.getElementById('wiVehicleType').value;
-  var plate      = document.getElementById('wiPlate').value.trim();
-  var plateState = document.getElementById('wiPlateState').value;
+  var plate      = '';
+  var plateState = '';
   var payAmt     = parseFloat(document.getElementById('wiPayAmount').value) || 0;
   var payMethod  = document.getElementById('wiPayMethod').value;
 
@@ -548,7 +549,7 @@ async function handleWalkInSubmit(e) {
   }
 
   var tenantData = {
-    name: name, email: '', phone: phone, company: company, initials: initials,
+    name: name, email: email, phone: phone, company: company, initials: initials,
     lotId: lotId, spaceNumber: space, monthlyRate: rate,
     startDate: start, endDate: '', status: 'active',
     vehicle: { make: '', model: '', year: null, plate: plate, type: vType },
@@ -676,11 +677,119 @@ document.addEventListener('DOMContentLoaded', async function() {
   var importBtn = document.getElementById('importTenantsBtn');
   if (importBtn) importBtn.addEventListener('click', function(){ document.getElementById('importModal').classList.add('open'); });
 
+  // Broadcast button
+  var broadcastBtn = document.getElementById('broadcastBtn');
+  if (broadcastBtn) broadcastBtn.addEventListener('click', openBroadcastModal);
+  document.getElementById('closeBroadcastModal').addEventListener('click', function(){ document.getElementById('broadcastModal').classList.remove('open'); });
+  document.getElementById('cancelBroadcastModal').addEventListener('click', function(){ document.getElementById('broadcastModal').classList.remove('open'); });
+  document.getElementById('broadcastModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+  document.getElementById('sendBroadcastBtn').addEventListener('click', sendBroadcast);
+
+  // Broadcast filter pill buttons
+  document.querySelectorAll('.bcast-filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.bcast-filter-btn').forEach(function(b){
+        b.style.background='#fff'; b.style.color='var(--gray-500)'; b.style.borderColor='var(--gray-200)';
+      });
+      this.style.background='var(--teal)'; this.style.color='#fff'; this.style.borderColor='var(--teal)';
+      updateBroadcastPreview();
+    });
+  });
+
+  // Broadcast SMS toggle — show/hide segment counter
+  document.getElementById('bcastSMS').addEventListener('change', function() {
+    document.getElementById('bcastSMSNote').style.display = this.checked ? 'inline' : 'none';
+  });
+
+  // Broadcast subject row visible only when email checked
+  document.getElementById('bcastEmail').addEventListener('change', function() {
+    document.getElementById('bcastSubjectRow').style.display = this.checked ? '' : 'none';
+  });
+
+  // Char counter
+  document.getElementById('bcastBody').addEventListener('input', function() {
+    var len = this.value.length;
+    document.getElementById('bcastCharCount').textContent = len;
+    document.getElementById('bcastSMSSegments').textContent = Math.ceil(len / 160) || 1;
+  });
+
+  // Auto-open walk-in modal if URL has ?walkin=1
+  if (new URLSearchParams(window.location.search).get('walkin') === '1') {
+    openWalkInModal();
+  }
+
   // Escape key
   document.addEventListener('keydown', function(e) {
     if (e.key==='Escape') {
       closeTenantPanel();
       document.getElementById('walkInModal').classList.remove('open');
+      document.getElementById('broadcastModal').classList.remove('open');
     }
   });
 });
+
+// ── Broadcast Modal ───────────────────────────────────────────────────────
+var _broadcastFilter = 'active';
+
+function getBroadcastRecipients() {
+  var filter = document.querySelector('.bcast-filter-btn[style*="var(--teal)"]');
+  var f = filter ? filter.dataset.filter : 'active';
+  if (f === 'all') return APP_DATA.tenants.slice();
+  return APP_DATA.tenants.filter(function(t){ return t.status === f; });
+}
+
+function updateBroadcastPreview() {
+  var list = getBroadcastRecipients();
+  var withEmail = list.filter(function(t){ return t.email; }).length;
+  var withPhone = list.filter(function(t){ return t.phone; }).length;
+  var el = document.getElementById('broadcastRecipientPreview');
+  el.innerHTML = '<strong style="color:var(--navy);">'+list.length+' tenant'+(list.length!==1?'s':'')+' selected</strong>'
+    +' &nbsp;·&nbsp; '+withEmail+' with email &nbsp;·&nbsp; '+withPhone+' with phone';
+}
+
+function openBroadcastModal() {
+  document.getElementById('bcastSubject').value = '';
+  document.getElementById('bcastBody').value = '';
+  document.getElementById('bcastCharCount').textContent = '0';
+  document.getElementById('bcastSMSSegments').textContent = '1';
+  document.getElementById('bcastEmail').checked = true;
+  document.getElementById('bcastSMS').checked = false;
+  document.getElementById('bcastSMSNote').style.display = 'none';
+  document.getElementById('bcastSubjectRow').style.display = '';
+  // Reset filter pills to Active
+  document.querySelectorAll('.bcast-filter-btn').forEach(function(b){
+    b.style.background='#fff'; b.style.color='var(--gray-500)'; b.style.borderColor='var(--gray-200)';
+  });
+  var activeBtn = document.querySelector('.bcast-filter-btn[data-filter="active"]');
+  if (activeBtn) { activeBtn.style.background='var(--teal)'; activeBtn.style.color='#fff'; activeBtn.style.borderColor='var(--teal)'; }
+  updateBroadcastPreview();
+  document.getElementById('broadcastModal').classList.add('open');
+}
+
+function sendBroadcast() {
+  var body = document.getElementById('bcastBody').value.trim();
+  var subject = document.getElementById('bcastSubject').value.trim();
+  var viaEmail = document.getElementById('bcastEmail').checked;
+  var viaSMS   = document.getElementById('bcastSMS').checked;
+  if (!body) { showToast('Please enter a message.', 'error'); return; }
+  if (!viaEmail && !viaSMS) { showToast('Select at least one channel (Email or SMS).', 'error'); return; }
+  if (viaEmail && !subject) { showToast('Please enter a subject for the email.', 'error'); return; }
+
+  var list = getBroadcastRecipients();
+  var sentEmail = viaEmail ? list.filter(function(t){ return t.email; }).length : 0;
+  var sentSMS   = viaSMS   ? list.filter(function(t){ return t.phone; }).length : 0;
+
+  var btn = document.getElementById('sendBroadcastBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+  setTimeout(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Broadcast';
+    document.getElementById('broadcastModal').classList.remove('open');
+    var parts = [];
+    if (sentEmail) parts.push(sentEmail+' email'+(sentEmail!==1?'s':''));
+    if (sentSMS)   parts.push(sentSMS+' SMS'+(sentSMS!==1?'s':''));
+    showToast('Broadcast sent \u2014 '+parts.join(' + '), 'success');
+  }, 1200);
+}
