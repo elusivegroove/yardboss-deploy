@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "buildCommand": null,
-  "installCommand": null,
-  "outputDirectory": ".",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://yard-boss-production.up.railway.app/api/:path*" }
+    {
+      "source": "/api/:path*",
+      "destination": "https://yard-boss-production.up.railway.app/api/:path*"
+    }
   ],
   "headers": [
     {

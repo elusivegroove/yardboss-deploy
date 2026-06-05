@@ -31,6 +31,18 @@ function showSavedMessage(elementId, message, duration) {
 document.addEventListener('DOMContentLoaded', function () {
   prefillProfile();
 
+  // ── Theme cards ────────────────────────────────────────────
+  var currentTheme = window.YBTheme ? window.YBTheme.get() : (localStorage.getItem('yb-theme') || 'light');
+  document.querySelectorAll('.theme-card-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.theme === currentTheme);
+    btn.addEventListener('click', function() {
+      if (window.YBTheme) window.YBTheme.set(btn.dataset.theme);
+      document.querySelectorAll('.theme-card-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.theme === btn.dataset.theme);
+      });
+    });
+  });
+
   const profileForm = document.getElementById('profileForm');
   if (profileForm) {
     profileForm.addEventListener('submit', function (e) {

@@ -1,6 +1,8 @@
 node_modules/
 server.js
+db.js
 routes/
+scripts/
 .env*
 *.log
 railway.toml

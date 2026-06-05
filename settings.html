@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/sidebar.css">
   <link rel="stylesheet" href="css/charts.css">
+<script>!function(){var t=localStorage.getItem("yb-theme");t&&"light"!==t&&document.documentElement.setAttribute("data-theme",t)}();</script>
 </head>
 <body>
 
@@ -25,6 +26,31 @@
 <main class="page-content">
 
   <div style="max-width:860px;display:flex;flex-direction:column;gap:20px;">
+
+    <!-- Appearance -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <h3 style="margin-bottom:2px;">Appearance</h3>
+          <p style="font-size:0.8rem;color:var(--gray-500)">Choose your color theme</p>
+        </div>
+        <i class="fas fa-palette" style="font-size:1.2rem;color:var(--teal)"></i>
+      </div>
+      <div class="theme-cards">
+        <button class="theme-card-btn" data-theme="light">
+          <div class="theme-preview theme-preview-light"></div>
+          <span><i class="fas fa-sun" style="margin-right:5px;font-size:0.75rem"></i>Light</span>
+        </button>
+        <button class="theme-card-btn" data-theme="dark">
+          <div class="theme-preview theme-preview-dark"></div>
+          <span><i class="fas fa-moon" style="margin-right:5px;font-size:0.75rem"></i>Dark</span>
+        </button>
+        <button class="theme-card-btn" data-theme="midnight">
+          <div class="theme-preview theme-preview-midnight"></div>
+          <span><i class="fas fa-star" style="margin-right:5px;font-size:0.75rem"></i>Midnight</span>
+        </button>
+      </div>
+    </div>
 
     <!-- Business Profile -->
     <div class="card">
