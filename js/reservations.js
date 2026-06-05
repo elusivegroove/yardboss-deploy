@@ -767,29 +767,51 @@ function openBroadcastModal() {
 }
 
 function sendBroadcast() {
-  var body = document.getElementById('bcastBody').value.trim();
+  var body    = document.getElementById('bcastBody').value.trim();
   var subject = document.getElementById('bcastSubject').value.trim();
   var viaEmail = document.getElementById('bcastEmail').checked;
   var viaSMS   = document.getElementById('bcastSMS').checked;
+
   if (!body) { showToast('Please enter a message.', 'error'); return; }
   if (!viaEmail && !viaSMS) { showToast('Select at least one channel (Email or SMS).', 'error'); return; }
   if (viaEmail && !subject) { showToast('Please enter a subject for the email.', 'error'); return; }
 
   var list = getBroadcastRecipients();
-  var sentEmail = viaEmail ? list.filter(function(t){ return t.email; }).length : 0;
-  var sentSMS   = viaSMS   ? list.filter(function(t){ return t.phone; }).length : 0;
+  if (!list.length) { showToast('No tenants match that filter.', 'error'); return; }
+
+  var channels = [];
+  if (viaEmail) channels.push('email');
+  if (viaSMS)   channels.push('sms');
+
+  var tenants = list.map(function(t) {
+    return { name: t.name, email: t.email || '', phone: t.phone || '' };
+  });
 
   var btn = document.getElementById('sendBroadcastBtn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
 
-  setTimeout(function() {
+  fetch('/api/broadcast', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tenants: tenants, subject: subject, body: body, channels: channels })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (res.error) throw new Error(res.error);
+    document.getElementById('broadcastModal').classList.remove('open');
+
+    var parts = [];
+    if (res.emailsSent)  parts.push(res.emailsSent + ' email' + (res.emailsSent !== 1 ? 's' : ''));
+    if (res.smsSent)     parts.push(res.smsSent + ' SMS' + (res.smsSent !== 1 ? 's' : ''));
+    var failed = (res.emailsFailed || 0) + (res.smsFailed || 0);
+    var msg = (res.mock ? 'Broadcast queued (mock) \u2014 ' : 'Broadcast sent \u2014 ') + parts.join(' + ');
+    if (failed) msg += ' (' + failed + ' failed)';
+    showToast(msg, res.mock ? 'warning' : 'success');
+  })
+  .catch(function(e) { showToast('Broadcast failed: ' + e.message, 'error'); })
+  .finally(function() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Broadcast';
-    document.getElementById('broadcastModal').classList.remove('open');
-    var parts = [];
-    if (sentEmail) parts.push(sentEmail+' email'+(sentEmail!==1?'s':''));
-    if (sentSMS)   parts.push(sentSMS+' SMS'+(sentSMS!==1?'s':''));
-    showToast('Broadcast sent \u2014 '+parts.join(' + '), 'success');
-  }, 1200);
+  });
 }
