@@ -20,9 +20,10 @@ const NAV_HTML = `
     <a href="/dev.html" class="nav-link nav-dev" data-page="dev"><i class="fas fa-code"></i> Dev</a>
   </div>
   <div class="nav-actions">
-    <div class="nav-search">
+    <div class="nav-search" id="navSearchTrigger">
       <i class="fas fa-search"></i>
-      <input type="text" placeholder="Search tenants, lots...">
+      <input type="text" placeholder="Search tenants, lots..." readonly>
+      <span class="nav-search-kbd" id="navSearchKbd">Ctrl K</span>
     </div>
     <div class="theme-picker" id="themePicker">
       <button class="nav-theme-btn" id="navThemeBtn" title="Change theme">
@@ -45,6 +46,148 @@ const NAV_HTML = `
   </div>
 </nav>
 `;
+
+// ── Global Search (Ctrl/Cmd+K) ────────────────────────────────
+
+const GLOBAL_SEARCH_HTML = `
+<div class="modal-backdrop" id="globalSearchModal">
+  <div class="modal global-search-modal">
+    <div class="global-search-input-wrap">
+      <i class="fas fa-search"></i>
+      <input type="text" id="globalSearchInput" placeholder="Search tenants, lots, pages..." autocomplete="off">
+      <span class="global-search-esc">ESC</span>
+    </div>
+    <div class="global-search-results" id="globalSearchResults"></div>
+  </div>
+</div>
+`;
+
+const SEARCH_PAGES = [
+  { title: 'Dashboard', sub: 'Overview & KPIs', icon: 'fa-th-large', href: '/index.html' },
+  { title: 'Manage Lots', sub: 'Lots & spaces', icon: 'fa-warehouse', href: '/lots.html' },
+  { title: 'Access Control', sub: 'Gate & access logs', icon: 'fa-shield-alt', href: '/access.html' },
+  { title: 'Tenants', sub: 'Tenants & reservations', icon: 'fa-users', href: '/reservations.html' },
+  { title: 'Billing Center', sub: 'Receivables & invoices', icon: 'fa-file-invoice-dollar', href: '/billing.html' },
+  { title: 'Reports', sub: 'Financial & operational reports', icon: 'fa-chart-bar', href: '/reports.html' },
+  { title: 'Settings', sub: 'Account & preferences', icon: 'fa-cog', href: '/settings.html' }
+];
+
+var _gsResults = [];
+var _gsActiveIndex = -1;
+
+function gsBuildResults(query) {
+  var q = query.trim().toLowerCase();
+  if (!q) return [];
+  var results = [];
+
+  if (typeof APP_DATA !== 'undefined' && APP_DATA.tenants) {
+    APP_DATA.tenants.forEach(function (t) {
+      var hay = [t.name, t.company, t.email, t.spaceNumber, t.vehicle && t.vehicle.plate]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (hay.indexOf(q) !== -1) {
+        results.push({
+          type: 'Tenant', icon: 'fa-user',
+          title: t.name,
+          sub: (t.company ? t.company + ' · ' : '') + 'Space ' + (t.spaceNumber || '—'),
+          href: '/reservations.html?tenant=' + encodeURIComponent(t.id)
+        });
+      }
+    });
+  }
+
+  if (typeof APP_DATA !== 'undefined' && APP_DATA.lots) {
+    APP_DATA.lots.forEach(function (l) {
+      var hay = [l.name, l.address, l.city, l.state].filter(Boolean).join(' ').toLowerCase();
+      if (hay.indexOf(q) !== -1) {
+        results.push({
+          type: 'Lot', icon: 'fa-warehouse',
+          title: l.name,
+          sub: [l.address, l.city].filter(Boolean).join(', ') || (l.totalSpaces + ' spaces'),
+          href: '/lots.html'
+        });
+      }
+    });
+  }
+
+  SEARCH_PAGES.forEach(function (p) {
+    if (p.title.toLowerCase().indexOf(q) !== -1 || p.sub.toLowerCase().indexOf(q) !== -1) {
+      results.push({ type: 'Page', icon: p.icon, title: p.title, sub: p.sub, href: p.href });
+    }
+  });
+
+  return results.slice(0, 30);
+}
+
+function gsUpdateActive() {
+  document.querySelectorAll('.gs-result').forEach(function (el) {
+    el.classList.toggle('active', parseInt(el.dataset.index, 10) === _gsActiveIndex);
+  });
+  var active = document.querySelector('.gs-result.active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+function gsRender(results) {
+  _gsResults = results;
+  _gsActiveIndex = results.length ? 0 : -1;
+  var container = document.getElementById('globalSearchResults');
+  if (!container) return;
+
+  if (!results.length) {
+    var q = document.getElementById('globalSearchInput').value.trim();
+    container.innerHTML = '<div class="gs-empty">' +
+      (q ? 'No results for "' + q + '"' : 'Start typing to search tenants, lots, and pages…') +
+      '</div>';
+    return;
+  }
+
+  var groups = {};
+  results.forEach(function (r) {
+    if (!groups[r.type]) groups[r.type] = [];
+    groups[r.type].push(r);
+  });
+
+  var order = ['Tenant', 'Lot', 'Page'];
+  var labels = { Tenant: 'Tenants', Lot: 'Lots', Page: 'Pages' };
+  var html = '';
+  var idx = 0;
+  order.forEach(function (type) {
+    if (!groups[type]) return;
+    html += '<div class="gs-section-label">' + labels[type] + '</div>';
+    groups[type].forEach(function (r) {
+      html += '<div class="gs-result' + (idx === 0 ? ' active' : '') + '" data-index="' + idx + '" data-href="' + r.href + '">'
+        + '<div class="gs-result-icon"><i class="fas ' + r.icon + '"></i></div>'
+        + '<div class="gs-result-text"><div class="gs-result-title">' + r.title + '</div><div class="gs-result-sub">' + r.sub + '</div></div>'
+        + '</div>';
+      idx++;
+    });
+  });
+  container.innerHTML = html;
+
+  container.querySelectorAll('.gs-result').forEach(function (el) {
+    el.addEventListener('click', function () {
+      window.location.href = this.dataset.href;
+    });
+    el.addEventListener('mouseenter', function () {
+      _gsActiveIndex = parseInt(this.dataset.index, 10);
+      gsUpdateActive();
+    });
+  });
+}
+
+function openGlobalSearch() {
+  var modal = document.getElementById('globalSearchModal');
+  var input = document.getElementById('globalSearchInput');
+  if (!modal || !input) return;
+  modal.classList.add('open');
+  input.value = '';
+  gsRender([]);
+  setTimeout(function () { input.focus(); }, 50);
+}
+
+function closeGlobalSearch() {
+  var modal = document.getElementById('globalSearchModal');
+  if (modal) modal.classList.remove('open');
+}
 
 // ── Theme management ────────────────────────────────────────
 
@@ -87,6 +230,58 @@ window.YBTheme = {
   // ── Inject nav ────────────────────────────────────────────
   var placeholder = document.getElementById('nav-placeholder');
   if (placeholder) placeholder.innerHTML = NAV_HTML;
+
+  // ── Global search (Ctrl/Cmd+K) ─────────────────────────────
+  document.body.insertAdjacentHTML('beforeend', GLOBAL_SEARCH_HTML);
+
+  var isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
+  var kbdEl = document.getElementById('navSearchKbd');
+  if (kbdEl) kbdEl.textContent = isMac ? '⌘K' : 'Ctrl K';
+
+  var gsModal = document.getElementById('globalSearchModal');
+  var gsInput = document.getElementById('globalSearchInput');
+  var gsTrigger = document.getElementById('navSearchTrigger');
+
+  if (gsTrigger) {
+    gsTrigger.addEventListener('click', function () {
+      openGlobalSearch();
+    });
+  }
+
+  if (gsInput) {
+    gsInput.addEventListener('input', function () {
+      gsRender(gsBuildResults(this.value));
+    });
+    gsInput.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (_gsActiveIndex < _gsResults.length - 1) { _gsActiveIndex++; gsUpdateActive(); }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (_gsActiveIndex > 0) { _gsActiveIndex--; gsUpdateActive(); }
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (_gsActiveIndex >= 0 && _gsResults[_gsActiveIndex]) {
+          window.location.href = _gsResults[_gsActiveIndex].href;
+        }
+      }
+    });
+  }
+
+  if (gsModal) {
+    gsModal.addEventListener('click', function (e) {
+      if (e.target === this) closeGlobalSearch();
+    });
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      openGlobalSearch();
+    } else if (e.key === 'Escape' && gsModal && gsModal.classList.contains('open')) {
+      closeGlobalSearch();
+    }
+  });
 
   // ── Active link ───────────────────────────────────────────
   var path = window.location.pathname;

@@ -46,6 +46,7 @@ function rowToTenant(row) {
     priceLocked:            !!row.price_locked,
     moveOutDate:            row.move_out_date ? row.move_out_date.toISOString().split('T')[0] : null,
     rejectionReason:        row.rejection_reason || null,
+    additionalDrivers:      row.additional_drivers || [],
   };
 }
 
@@ -84,14 +85,14 @@ router.post('/', async (req, res) => {
         truck_number, trailer_number, insurance_doc, insurance_policy_number,
         insurance_company, insurance_exp_date, auto_renew, renewal_period,
         renewal_rate, payment_method, autopay_card, autopay_next_date, payments,
-        price_locked, move_out_date, rejection_reason
+        price_locked, move_out_date, rejection_reason, additional_drivers
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,
         $9,$10,$11,$12,$13,$14,
         $15,$16,$17,$18,
         $19,$20,$21,$22,
         $23,$24,$25,$26,$27,
-        $28,$29,$30
+        $28,$29,$30,$31
       ) RETURNING *
     `, [
       id,
@@ -123,7 +124,8 @@ router.post('/', async (req, res) => {
       b.payments ? JSON.stringify(b.payments) : '[]',
       b.priceLocked || false,
       b.moveOutDate || null,
-      b.rejectionReason || null
+      b.rejectionReason || null,
+      b.additionalDrivers ? JSON.stringify(b.additionalDrivers) : '[]'
     ]);
     res.status(201).json(rowToTenant(result.rows[0]));
   } catch (err) {
@@ -169,9 +171,10 @@ router.patch('/:id', async (req, res) => {
       priceLocked:            'price_locked',
       moveOutDate:            'move_out_date',
       rejectionReason:        'rejection_reason',
+      additionalDrivers:      'additional_drivers',
     };
 
-    const jsonFields = new Set(['vehicle', 'insurance_doc', 'payments']);
+    const jsonFields = new Set(['vehicle', 'insurance_doc', 'payments', 'additional_drivers']);
     const setClauses = ['updated_at = NOW()'];
     const values = [];
     let paramIdx = 1;

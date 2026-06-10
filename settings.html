@@ -206,12 +206,68 @@
       </div>
     </div>
 
+    <!-- Webhooks -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <h3 style="margin-bottom:2px;">Webhooks</h3>
+          <p style="font-size:0.8rem;color:var(--gray-500)">Notify external services when key events happen</p>
+        </div>
+        <i class="fas fa-plug" style="font-size:1.2rem;color:var(--teal)"></i>
+      </div>
+      <div id="webhookList"></div>
+      <div id="webhookEmpty" class="empty-state" style="padding:24px 20px;display:none;">
+        <i class="fas fa-plug"></i>
+        <p>No webhooks configured yet.</p>
+      </div>
+      <button class="btn btn-secondary" id="addWebhookBtn" style="margin-top:12px;"><i class="fas fa-plus"></i> Add Webhook</button>
+    </div>
+
   </div>
 
 </main>
 
+<!-- ── Webhook Modal ─────────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="webhookModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="webhookModalTitle"><i class="fas fa-plug" style="margin-right:8px;color:var(--teal);"></i>Add Webhook</h3>
+      <button class="modal-close" id="closeWebhookModal"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="webhookForm">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="whName" placeholder="e.g. Slack Alerts">
+      </div>
+      <div class="form-group">
+        <label>Endpoint URL</label>
+        <input type="url" id="whUrl" placeholder="https://example.com/hooks/yardboss" required>
+      </div>
+      <div class="form-group">
+        <label>Send notifications for</label>
+        <div id="whEventTypes" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+      <div class="toggle-wrap" style="padding-top:0;">
+        <div class="toggle-info">
+          <h4>Enabled</h4>
+          <p>Webhook will receive events while enabled</p>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="whEnabled" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn btn-secondary" id="cancelWebhookModal">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Webhook</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="js/data.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/webhooks.js"></script>
 </body>
 </html>

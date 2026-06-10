@@ -119,6 +119,12 @@
   </div>
 
   <div class="panel-section">
+    <h4>Additional Drivers</h4>
+    <div id="panelDrivers"></div>
+    <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px;" id="panelAddDriverBtn"><i class="fas fa-user-plus"></i> Add Driver</button>
+  </div>
+
+  <div class="panel-section">
     <h4>Insurance Documents</h4>
     <div id="panelInsurancePreview" style="margin-bottom:8px;"></div>
     <div class="panel-info-row"><span class="label">Policy #</span><span class="value" id="panelInsurancePolicy">-</span></div>
@@ -689,6 +695,34 @@
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
         <button type="button" class="btn btn-secondary" id="cancelLedgerEntryModal">Cancel</button>
         <button type="submit" class="btn btn-primary" id="ledgerEntrySubmitBtn"><i class="fas fa-save"></i> Add Charge</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Add Driver Modal ─────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="additionalDriverModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-user-plus" style="margin-right:8px;color:var(--teal);"></i>Add Driver</h3>
+      <button class="modal-close" id="closeAdditionalDriverModal"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="additionalDriverForm">
+      <div class="form-group">
+        <label>Driver Name</label>
+        <input type="text" id="adName" required>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="adPhone">
+      </div>
+      <div class="form-group">
+        <label>Driver's License #</label>
+        <input type="text" id="adLicense">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn btn-secondary" id="cancelAdditionalDriverModal">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Add Driver</button>
       </div>
     </form>
   </div>

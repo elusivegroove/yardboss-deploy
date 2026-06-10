@@ -57,6 +57,7 @@ async function runMigrations() {
       price_locked            BOOLEAN DEFAULT false,
       move_out_date           DATE,
       rejection_reason        TEXT,
+      additional_drivers      JSONB DEFAULT '[]',
       created_at              TIMESTAMPTZ DEFAULT NOW(),
       updated_at              TIMESTAMPTZ DEFAULT NOW()
     )
@@ -66,6 +67,7 @@ async function runMigrations() {
   await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS price_locked BOOLEAN DEFAULT false`);
   await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS move_out_date DATE`);
   await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS rejection_reason TEXT`);
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS additional_drivers JSONB DEFAULT '[]'`);
 
   console.log('[migrate] Tables ready.');
 

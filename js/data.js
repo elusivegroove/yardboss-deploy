@@ -1261,3 +1261,15 @@ function exportToCSV(headers, rows, filename) {
 function generateId(prefix) {
   return (prefix||'id')+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 }
+
+// Fire-and-forget webhook event dispatch. Errors are swallowed since
+// webhooks are an optional integration and must never block the UI flow.
+function fireWebhookEvent(event, data) {
+  try {
+    fetch('/api/webhooks/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: event, data: data || {} })
+    }).catch(function(){});
+  } catch (e) {}
+}

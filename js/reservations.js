@@ -190,6 +190,21 @@ function openTenantPanel(tenantId) {
   document.getElementById('panelTrailerNumber').textContent = tenant.trailerNumber || '—';
   document.getElementById('panelPlateState').textContent = tenant.plateState || '—';
 
+  // Additional Drivers
+  var drivers = tenant.additionalDrivers || [];
+  document.getElementById('panelDrivers').innerHTML = drivers.length
+    ? drivers.map(function(d) {
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">'
+          +'<div style="display:flex;flex-direction:column;gap:2px;">'
+          +'<span style="font-size:0.85rem;font-weight:600;color:var(--navy);">'+d.name+'</span>'
+          +'<span style="font-size:0.75rem;color:var(--gray-400);">'+[d.phone, d.license ? 'Lic# '+d.license : null].filter(Boolean).join(' · ')+'</span>'
+          +'</div>'
+          +'<button class="btn btn-secondary btn-sm btn-icon" title="Remove Driver" onclick="removeAdditionalDriver(\''+tenantId+'\',\''+d.id+'\')"><i class="fas fa-times"></i></button>'
+          +'</div>';
+      }).join('')
+    : '<p style="color:var(--gray-400);font-size:0.82rem;padding:4px 0;">No additional drivers</p>';
+  document.getElementById('panelAddDriverBtn').onclick = function(){ openAdditionalDriverModal(tenantId); };
+
   // Insurance
   var insPreview = document.getElementById('panelInsurancePreview');
   if (tenant.insuranceDoc && tenant.insuranceDoc.data) {
@@ -388,6 +403,14 @@ async function confirmMoveOut(tenantId) {
     tenant.endDate = endDate;
     showToast('Tenant moved out (offline)', 'warning');
   }
+
+  fireWebhookEvent('tenant.moveout', {
+    tenantId: tenantId,
+    tenantName: tenant.name,
+    spaceNumber: tenant.spaceNumber,
+    endDate: endDate
+  });
+
   updateTabCounts();
   renderTenantsTable();
   if (_panelTenantId === tenantId) openTenantPanel(tenantId);
@@ -491,7 +514,70 @@ async function handleLedgerEntrySubmit(e) {
     showToast((_ledgerEntryType==='charge' ? 'Charge added' : 'Payment recorded')+' (offline)', 'warning');
   }
 
+  if (_ledgerEntryType === 'payment') {
+    fireWebhookEvent('payment.received', {
+      tenantId: tenantId,
+      tenantName: tenant.name,
+      amount: amount,
+      date: date
+    });
+  }
+
   document.getElementById('ledgerEntryModal').classList.remove('open');
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+// ── Additional Drivers ────────────────────────────────────────────────────
+function openAdditionalDriverModal(tenantId) {
+  var form = document.getElementById('additionalDriverForm');
+  form.reset();
+  form.dataset.tenantId = tenantId;
+  document.getElementById('additionalDriverModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('adName').focus(); }, 80);
+}
+
+async function handleAdditionalDriverSubmit(e) {
+  e.preventDefault();
+  var form = document.getElementById('additionalDriverForm');
+  var tenantId = form.dataset.tenantId;
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+
+  var name = document.getElementById('adName').value.trim();
+  var phone = document.getElementById('adPhone').value.trim();
+  var license = document.getElementById('adLicense').value.trim();
+  if (!name) { showToast('Please enter the driver\'s name.', 'error'); return; }
+
+  var driver = { id: generateId('drv'), name: name, phone: phone, license: license };
+  var drivers = (tenant.additionalDrivers || []).concat([driver]);
+
+  try {
+    await YB.saveTenant({ id: tenantId, additionalDrivers: drivers });
+    tenant.additionalDrivers = drivers;
+    showToast('Driver added for '+tenant.name, 'success');
+  } catch (err) {
+    tenant.additionalDrivers = drivers;
+    showToast('Driver added (offline)', 'warning');
+  }
+
+  document.getElementById('additionalDriverModal').classList.remove('open');
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+async function removeAdditionalDriver(tenantId, driverId) {
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  var drivers = (tenant.additionalDrivers || []).filter(function(d){ return d.id !== driverId; });
+
+  try {
+    await YB.saveTenant({ id: tenantId, additionalDrivers: drivers });
+    tenant.additionalDrivers = drivers;
+    showToast('Driver removed', 'success');
+  } catch (err) {
+    tenant.additionalDrivers = drivers;
+    showToast('Driver removed (offline)', 'warning');
+  }
+
   if (_panelTenantId === tenantId) openTenantPanel(tenantId);
 }
 
@@ -780,6 +866,13 @@ async function handleAddTenantSubmit(e) {
     showToast((editId ? 'Tenant updated' : 'Tenant added')+' (offline)', 'warning');
   }
 
+  if (!editId) {
+    fireWebhookEvent('tenant.created', {
+      name: name, email: email, company: company,
+      lotId: lotId, spaceNumber: space, monthlyRate: rate
+    });
+  }
+
   document.getElementById('addTenantModal').classList.remove('open');
   updateTabCounts();
   renderTenantsTable();
@@ -845,6 +938,11 @@ async function handleWalkInSubmit(e) {
     APP_DATA.tenants.push(tenantData);
     showToast('Walk-in checked in: '+name+' (offline)', 'warning');
   }
+
+  fireWebhookEvent('tenant.created', {
+    name: name, email: email, company: company,
+    lotId: lotId, spaceNumber: space, monthlyRate: rate, walkIn: true
+  });
 
   document.getElementById('walkInModal').classList.remove('open');
   updateTabCounts();
@@ -960,6 +1058,12 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('ledgerEntryModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
   document.getElementById('ledgerEntryForm').addEventListener('submit', handleLedgerEntrySubmit);
 
+  // Additional Driver modal
+  document.getElementById('closeAdditionalDriverModal').addEventListener('click', function(){ document.getElementById('additionalDriverModal').classList.remove('open'); });
+  document.getElementById('cancelAdditionalDriverModal').addEventListener('click', function(){ document.getElementById('additionalDriverModal').classList.remove('open'); });
+  document.getElementById('additionalDriverModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+  document.getElementById('additionalDriverForm').addEventListener('submit', handleAdditionalDriverSubmit);
+
   // Message modal
   document.getElementById('sendMsgBtn').addEventListener('click', sendMessage);
   document.getElementById('closeMsgModal').addEventListener('click', function(){ document.getElementById('msgModal').classList.remove('open'); });
@@ -1030,6 +1134,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       document.getElementById('moveOutModal').classList.remove('open');
       document.getElementById('rejectModal').classList.remove('open');
       document.getElementById('ledgerEntryModal').classList.remove('open');
+      document.getElementById('additionalDriverModal').classList.remove('open');
     }
   });
 });
