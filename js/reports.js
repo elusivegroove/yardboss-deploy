@@ -1,3 +1,9 @@
+function formatCohortMonth(yearMonth) {
+  const parts = yearMonth.split('-');
+  const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
 const FINANCIAL_REPORTS = [
   {
     id: 'ar-summary',
@@ -266,6 +272,62 @@ const OPERATIONAL_REPORTS = [
       });
       return {
         headers: ['Month', 'Move-Ins', 'Move-Outs', 'Net Change'],
+        rows: rows
+      };
+    }
+  },
+  {
+    id: 'cohort-retention',
+    icon: 'fa-layer-group',
+    title: 'Cohorted Retention',
+    desc: 'Tenant retention grouped by move-in month',
+    getData: function () {
+      const cohorts = {};
+      APP_DATA.tenants.forEach(function (t) {
+        if (!t.startDate) return;
+        const cohort = t.startDate.slice(0, 7);
+        if (!cohorts[cohort]) cohorts[cohort] = { total: 0, active: 0 };
+        cohorts[cohort].total++;
+        if (t.status === 'active') cohorts[cohort].active++;
+      });
+      const rows = Object.keys(cohorts).sort().map(function (cohort) {
+        const c = cohorts[cohort];
+        const movedOut = c.total - c.active;
+        const retention = c.total ? Math.round((c.active / c.total) * 100) : 0;
+        return [formatCohortMonth(cohort), c.total, c.active, movedOut, retention + '%'];
+      });
+      return {
+        headers: ['Move-In Cohort', 'Tenants', 'Still Active', 'Moved Out', 'Retention %'],
+        rows: rows
+      };
+    }
+  },
+  {
+    id: 'equipment-report',
+    icon: 'fa-trailer',
+    title: 'Equipment Report',
+    desc: 'Vehicle inventory and insurance status by type',
+    getData: function () {
+      const types = {};
+      const today = new Date();
+      const in30 = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+      APP_DATA.tenants.forEach(function (t) {
+        const type = (t.vehicle && t.vehicle.type) || 'Unspecified';
+        if (!types[type]) types[type] = { total: 0, active: 0, insured: 0, expiringSoon: 0 };
+        types[type].total++;
+        if (t.status === 'active') types[type].active++;
+        if (t.insuranceExpDate) {
+          const exp = new Date(t.insuranceExpDate);
+          if (exp >= today) types[type].insured++;
+          if (exp >= today && exp <= in30) types[type].expiringSoon++;
+        }
+      });
+      const rows = Object.keys(types).sort().map(function (type) {
+        const s = types[type];
+        return [type, s.total, s.active, s.insured, s.expiringSoon];
+      });
+      return {
+        headers: ['Equipment Type', 'Total', 'Active', 'Insured', 'Insurance Expiring (30d)'],
         rows: rows
       };
     }

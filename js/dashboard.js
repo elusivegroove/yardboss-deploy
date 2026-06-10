@@ -5,6 +5,7 @@ let revenueChartInst = null;
 let lotPieChartInst = null;
 let avgRateChartInst = null;
 let occupancyChartInst = null;
+let bookingMixChartInst = null;
 
 const CHART_COLORS = {
   teal: '#00b4a0',
@@ -439,6 +440,88 @@ function renderOccupancyChart(lotFilter) {
   });
 }
 
+function getBookingMix(filter) {
+  const lots = getFilteredLots(filter);
+  const tenants = getFilteredTenants(filter);
+
+  const totalSpaces = lots.reduce(function (s, l) { return s + l.totalSpaces; }, 0);
+  const active = tenants.filter(function (t) { return t.status === 'active'; }).length;
+  const pending = tenants.filter(function (t) { return t.status === 'pending'; }).length;
+  const moveout = tenants.filter(function (t) { return t.status === 'moveout'; }).length;
+  const vacant = Math.max(0, totalSpaces - active - pending - moveout);
+
+  return { totalSpaces, active, pending, moveout, vacant };
+}
+
+function renderBookingMixChart(filter) {
+  const ctx = document.getElementById('bookingMixChart');
+  if (!ctx) return;
+  if (bookingMixChartInst) { bookingMixChartInst.destroy(); }
+
+  const mix = getBookingMix(filter);
+  const total = mix.totalSpaces || 1;
+
+  bookingMixChartInst = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Active', 'Pending Approval', 'Moving Out', 'Vacant'],
+      datasets: [{
+        data: [mix.active, mix.pending, mix.moveout, mix.vacant],
+        backgroundColor: [CHART_COLORS.green, CHART_COLORS.yellow, '#f97316', '#cbd5e1'],
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#334155', font: { family: 'Inter', size: 11 }, boxWidth: 10, padding: 12 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function (ctx) {
+              const pct = Math.round((ctx.raw / total) * 100);
+              return ctx.label + ': ' + ctx.raw + ' (' + pct + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderBookingMixBreakdown(filter) {
+  const container = document.getElementById('bookingMixBreakdown');
+  if (!container) return;
+
+  const mix = getBookingMix(filter);
+  const total = mix.totalSpaces || 1;
+  const items = [
+    { label: 'Active', value: mix.active, color: CHART_COLORS.green },
+    { label: 'Pending Approval', value: mix.pending, color: CHART_COLORS.yellow },
+    { label: 'Moving Out', value: mix.moveout, color: '#f97316' },
+    { label: 'Vacant', value: mix.vacant, color: '#cbd5e1' }
+  ];
+
+  container.innerHTML = items.map(function (item) {
+    const pct = Math.round((item.value / total) * 100);
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100);">'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<span style="width:10px;height:10px;border-radius:50%;background:' + item.color + ';display:inline-block;"></span>'
+      + '<span style="font-size:0.85rem;color:var(--navy);font-weight:600;">' + item.label + '</span>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:10px;">'
+      + '<span style="font-size:0.85rem;color:var(--gray-500);">' + item.value + ' spaces</span>'
+      + '<span style="font-size:0.78rem;font-weight:700;color:var(--navy);min-width:38px;text-align:right;">' + pct + '%</span>'
+      + '</div></div>';
+  }).join('')
+    + '<div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:4px;font-size:0.82rem;color:var(--gray-400);"><span>Total Spaces</span><span style="font-weight:700;color:var(--navy);">' + mix.totalSpaces + '</span></div>';
+}
+
 function renderUpcomingReservations(filter) {
   const tbody = document.getElementById('upcomingTbody');
   if (!tbody) return;
@@ -481,6 +564,8 @@ function renderAll(filter) {
   renderLotPieChart(filter);
   renderAvgRateChart(filter);
   renderOccupancyChart('all');
+  renderBookingMixChart(filter);
+  renderBookingMixBreakdown(filter);
   renderUpcomingReservations(filter);
 }
 
