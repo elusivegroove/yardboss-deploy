@@ -43,6 +43,9 @@ function rowToTenant(row) {
     autopayCard:            row.autopay_card      || null,
     autopayNextDate:        row.autopay_next_date ? row.autopay_next_date.toISOString().split('T')[0] : null,
     payments:               row.payments || [],
+    priceLocked:            !!row.price_locked,
+    moveOutDate:            row.move_out_date ? row.move_out_date.toISOString().split('T')[0] : null,
+    rejectionReason:        row.rejection_reason || null,
   };
 }
 
@@ -80,13 +83,15 @@ router.post('/', async (req, res) => {
         start_date, end_date, status, registration_status, vehicle, plate_state,
         truck_number, trailer_number, insurance_doc, insurance_policy_number,
         insurance_company, insurance_exp_date, auto_renew, renewal_period,
-        renewal_rate, payment_method, autopay_card, autopay_next_date, payments
+        renewal_rate, payment_method, autopay_card, autopay_next_date, payments,
+        price_locked, move_out_date, rejection_reason
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,
         $9,$10,$11,$12,$13,$14,
         $15,$16,$17,$18,
         $19,$20,$21,$22,
-        $23,$24,$25,$26,$27
+        $23,$24,$25,$26,$27,
+        $28,$29,$30
       ) RETURNING *
     `, [
       id,
@@ -115,7 +120,10 @@ router.post('/', async (req, res) => {
       b.paymentMethod || 'manual',
       b.autopayCard     || null,
       b.autopayNextDate || null,
-      b.payments ? JSON.stringify(b.payments) : '[]'
+      b.payments ? JSON.stringify(b.payments) : '[]',
+      b.priceLocked || false,
+      b.moveOutDate || null,
+      b.rejectionReason || null
     ]);
     res.status(201).json(rowToTenant(result.rows[0]));
   } catch (err) {
@@ -158,6 +166,9 @@ router.patch('/:id', async (req, res) => {
       autopayCard:            'autopay_card',
       autopayNextDate:        'autopay_next_date',
       payments:               'payments',
+      priceLocked:            'price_locked',
+      moveOutDate:            'move_out_date',
+      rejectionReason:        'rejection_reason',
     };
 
     const jsonFields = new Set(['vehicle', 'insurance_doc', 'payments']);

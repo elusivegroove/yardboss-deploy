@@ -22,7 +22,8 @@
   <div style="display:flex;gap:4px;">
     <button class="tab-btn cmd-btn active" data-tab="all">All <span class="tab-count" style="background:rgba(255,255,255,0.2);padding:1px 6px;border-radius:99px;font-size:0.7rem;margin-left:2px;">0</span></button>
     <button class="tab-btn cmd-btn" data-tab="active">Active <span class="tab-count" style="background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:99px;font-size:0.7rem;margin-left:2px;">0</span></button>
-    <button class="tab-btn cmd-btn" data-tab="pending">Pending <span class="tab-count" style="background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:99px;font-size:0.7rem;margin-left:2px;">0</span></button>
+    <button class="tab-btn cmd-btn" data-tab="pending">Pending Approval <span class="tab-count" style="background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:99px;font-size:0.7rem;margin-left:2px;">0</span></button>
+    <button class="tab-btn cmd-btn" data-tab="moveout">Move-Outs <span class="tab-count" style="background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:99px;font-size:0.7rem;margin-left:2px;">0</span></button>
     <button class="tab-btn cmd-btn" data-tab="past">Past <span class="tab-count" style="background:rgba(255,255,255,0.15);padding:1px 6px;border-radius:99px;font-size:0.7rem;margin-left:2px;">0</span></button>
   </div>
   <div class="cmd-actions">
@@ -72,6 +73,16 @@
     <button class="modal-close" id="closePanelBtn"><i class="fas fa-times"></i></button>
   </div>
 
+  <div class="panel-section" id="panelApprovalBanner" style="display:none;background:#fffbeb;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div style="font-size:0.82rem;color:#92400e;"><i class="fas fa-hourglass-half" style="margin-right:6px;"></i>This booking is awaiting approval.</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" id="panelRejectBtn" style="color:#ef4444;border-color:#fecaca;"><i class="fas fa-ban"></i> Reject</button>
+        <button class="btn btn-primary btn-sm" id="panelApproveBtn" style="background:#16a34a;border-color:#16a34a;"><i class="fas fa-check"></i> Approve</button>
+      </div>
+    </div>
+  </div>
+
   <div class="panel-section">
     <h4>Contact</h4>
     <div class="panel-info-row"><span class="label"><i class="fas fa-envelope" style="margin-right:6px;color:var(--teal)"></i>Email</span><span class="value" id="panelEmail">-</span></div>
@@ -84,8 +95,17 @@
     <div class="panel-info-row"><span class="label">Lot</span><span class="value" id="panelLot">-</span></div>
     <div class="panel-info-row"><span class="label">Space #</span><span class="value" id="panelSpace">-</span></div>
     <div class="panel-info-row"><span class="label">Monthly Rate</span><span class="value" id="panelRate">-</span></div>
+    <div class="panel-info-row">
+      <span class="label">Price Lock</span>
+      <span class="value"><button class="btn btn-secondary btn-sm" id="panelPriceLockBtn"><i class="fas fa-lock-open"></i> Unlocked</button></span>
+    </div>
     <div class="panel-info-row"><span class="label">Start Date</span><span class="value" id="panelStart">-</span></div>
     <div class="panel-info-row"><span class="label">End Date</span><span class="value" id="panelEnd">-</span></div>
+  </div>
+
+  <div class="panel-section" id="panelMoveOutSection">
+    <h4>Move-Out</h4>
+    <div id="panelMoveOutContent"></div>
   </div>
 
   <div class="panel-section">
@@ -173,7 +193,8 @@
           <label>Status</label>
           <select id="atStatus">
             <option value="active">Active</option>
-            <option value="pending">Pending</option>
+            <option value="pending">Pending Approval</option>
+            <option value="moveout">Moving Out</option>
             <option value="past">Past</option>
           </select>
         </div>
@@ -590,6 +611,42 @@
         <button type="button" class="btn btn-secondary" id="cancelBroadcastModal">Cancel</button>
         <button type="button" class="btn btn-primary" id="sendBroadcastBtn" style="background:var(--navy);border-color:var(--navy);min-width:140px;"><i class="fas fa-paper-plane"></i> Send Broadcast</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Initiate Move-Out Modal ─────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="moveOutModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-dolly" style="margin-right:8px;color:#f97316;"></i>Initiate Move-Out</h3>
+      <button class="modal-close" id="closeMoveOutModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="form-group">
+      <label>Expected Vacate Date *</label>
+      <input type="date" id="moMoveOutDate" required>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
+      <button type="button" class="btn btn-secondary" id="cancelMoveOutModal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="confirmMoveOutModalBtn" style="background:#f97316;border-color:#f97316;"><i class="fas fa-dolly"></i> Start Move-Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Reject Booking Modal ─────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="rejectModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-ban" style="margin-right:8px;color:#ef4444;"></i>Reject Booking</h3>
+      <button class="modal-close" id="closeRejectModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="form-group">
+      <label>Reason (optional)</label>
+      <textarea id="rejReason" rows="3" placeholder="e.g. No spaces available for requested vehicle type" style="width:100%;resize:vertical;padding:10px;border:1px solid var(--gray-200);border-radius:6px;font-family:Inter,sans-serif;font-size:0.875rem;"></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
+      <button type="button" class="btn btn-secondary" id="cancelRejectModal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="confirmRejectModalBtn" style="background:#ef4444;border-color:#ef4444;"><i class="fas fa-ban"></i> Reject Booking</button>
     </div>
   </div>
 </div>

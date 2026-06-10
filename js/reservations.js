@@ -24,7 +24,7 @@ function getFilteredTenants() {
 }
 
 function updateTabCounts() {
-  var counts = { all: APP_DATA.tenants.length, active: 0, pending: 0, past: 0 };
+  var counts = { all: APP_DATA.tenants.length, active: 0, pending: 0, moveout: 0, past: 0 };
   APP_DATA.tenants.forEach(function(t){ if (counts[t.status] !== undefined) counts[t.status]++; });
   document.querySelectorAll('.tab-btn').forEach(function(btn) {
     var tab = btn.dataset.tab;
@@ -51,12 +51,23 @@ function renderTenantsTable() {
       ? '<span class="badge badge-green">Active</span>'
       : t.status === 'pending'
         ? '<span class="badge badge-yellow">Pending</span>'
-        : '<span class="badge badge-gray">Past</span>';
+        : t.status === 'moveout'
+          ? '<span class="badge badge-orange">Moving Out</span>'
+          : t.rejectionReason
+            ? '<span class="badge badge-red">Rejected</span>'
+            : '<span class="badge badge-gray">Past</span>';
     var autopayBadge = t.paymentMethod === 'autopay'
       ? ' <span class="badge badge-teal" style="font-size:0.65rem;"><i class="fas fa-credit-card" style="margin-right:2px;"></i>AutoPay</span>'
       : '';
     var walkInBadge = t.walkIn
       ? ' <span class="badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;font-size:0.62rem;"><i class="fas fa-bolt" style="margin-right:2px;"></i>Walk-In</span>'
+      : '';
+    var lockBadge = t.priceLocked
+      ? ' <span class="badge badge-navy" title="Rate is locked" style="font-size:0.65rem;"><i class="fas fa-lock" style="margin-right:2px;"></i>Locked</span>'
+      : '';
+    var approvalActions = t.status === 'pending'
+      ? '<button class="btn btn-secondary btn-sm btn-icon" title="Approve" style="color:#16a34a;" onclick="approveTenant(\''+t.id+'\')"><i class="fas fa-check"></i></button>'
+        + '<button class="btn btn-secondary btn-sm btn-icon" title="Reject" style="color:#ef4444;" onclick="openRejectModal(\''+t.id+'\')"><i class="fas fa-ban"></i></button>'
       : '';
     return '<tr style="cursor:pointer;" onclick="openTenantPanel(\''+t.id+'\')">'
       +'<td><div style="display:flex;align-items:center;gap:10px;">'
@@ -68,11 +79,12 @@ function renderTenantsTable() {
       +'<td style="font-size:0.82rem;white-space:nowrap;">'+t.phone+'</td>'
       +'<td style="font-size:0.82rem;">'+getLotName(t.lotId)+'</td>'
       +'<td>'+stBadge+'</td>'
-      +'<td style="font-size:0.82rem;"><span class="badge badge-teal">'+formatCurrency(t.monthlyRate)+'/mo</span>'+autopayBadge+'</td>'
+      +'<td style="font-size:0.82rem;"><span class="badge badge-teal">'+formatCurrency(t.monthlyRate)+'/mo</span>'+autopayBadge+lockBadge+'</td>'
       +'<td onclick="event.stopPropagation()">'
       +'<div style="display:flex;gap:5px;">'
       +'<button class="btn btn-secondary btn-sm btn-icon" title="View Details" onclick="openTenantPanel(\''+t.id+'\')"><i class="fas fa-eye"></i></button>'
       +'<button class="btn btn-secondary btn-sm btn-icon" title="Send Message" onclick="openMessageModal(\''+t.id+'\')"><i class="fas fa-envelope"></i></button>'
+      +approvalActions
       +'</div></td>'
       +'</tr>';
   }).join('');
@@ -92,8 +104,26 @@ function openTenantPanel(tenantId) {
   document.getElementById('panelName').textContent = tenant.name;
 
   var statusEl = document.getElementById('panelStatus');
-  statusEl.className = 'badge '+(tenant.status==='active'?'badge-green':tenant.status==='pending'?'badge-yellow':'badge-gray');
-  statusEl.textContent = tenant.status.charAt(0).toUpperCase()+tenant.status.slice(1);
+  var stClass = tenant.status==='active' ? 'badge-green'
+    : tenant.status==='pending' ? 'badge-yellow'
+    : tenant.status==='moveout' ? 'badge-orange'
+    : tenant.rejectionReason ? 'badge-red'
+    : 'badge-gray';
+  var stLabel = tenant.status==='moveout' ? 'Moving Out'
+    : (tenant.status==='past' && tenant.rejectionReason) ? 'Rejected'
+    : tenant.status.charAt(0).toUpperCase()+tenant.status.slice(1);
+  statusEl.className = 'badge '+stClass;
+  statusEl.textContent = stLabel;
+
+  // Approval banner (pending bookings only)
+  var approvalBanner = document.getElementById('panelApprovalBanner');
+  if (tenant.status === 'pending') {
+    approvalBanner.style.display = '';
+    document.getElementById('panelApproveBtn').onclick = function(){ approveTenant(tenantId); };
+    document.getElementById('panelRejectBtn').onclick = function(){ openRejectModal(tenantId); };
+  } else {
+    approvalBanner.style.display = 'none';
+  }
 
   document.getElementById('panelEmail').textContent = tenant.email || '—';
   document.getElementById('panelPhone').textContent = tenant.phone || '—';
@@ -103,6 +133,43 @@ function openTenantPanel(tenantId) {
   document.getElementById('panelRate').textContent = formatCurrency(tenant.monthlyRate)+'/mo';
   document.getElementById('panelStart').textContent = formatDate(tenant.startDate);
   document.getElementById('panelEnd').textContent = formatDate(tenant.endDate);
+
+  // Price Lock toggle
+  var lockBtn = document.getElementById('panelPriceLockBtn');
+  if (tenant.priceLocked) {
+    lockBtn.innerHTML = '<i class="fas fa-lock"></i> Locked';
+    lockBtn.style.background = 'var(--navy)';
+    lockBtn.style.borderColor = 'var(--navy)';
+    lockBtn.style.color = '#fff';
+  } else {
+    lockBtn.innerHTML = '<i class="fas fa-lock-open"></i> Unlocked';
+    lockBtn.style.background = '';
+    lockBtn.style.borderColor = '';
+    lockBtn.style.color = '';
+  }
+  lockBtn.onclick = function(){ togglePriceLock(tenantId); };
+
+  // Move-Out section
+  var moveOutSection = document.getElementById('panelMoveOutSection');
+  var moveOutContent = document.getElementById('panelMoveOutContent');
+  if (tenant.status === 'pending') {
+    moveOutSection.style.display = 'none';
+  } else {
+    moveOutSection.style.display = '';
+    if (tenant.status === 'moveout') {
+      moveOutContent.innerHTML = '<div class="panel-info-row"><span class="label">Expected Vacate</span><span class="value">'+formatDate(tenant.moveOutDate)+'</span></div>'
+        +'<div style="display:flex;gap:8px;margin-top:10px;">'
+        +'<button class="btn btn-secondary btn-sm" style="flex:1;" onclick="cancelMoveOut(\''+tenantId+'\')"><i class="fas fa-undo"></i> Cancel Move-Out</button>'
+        +'<button class="btn btn-primary btn-sm" style="flex:1;background:#f97316;border-color:#f97316;" onclick="confirmMoveOut(\''+tenantId+'\')"><i class="fas fa-check"></i> Confirm Move-Out</button>'
+        +'</div>';
+    } else if (tenant.status === 'active') {
+      moveOutContent.innerHTML = '<button class="btn btn-secondary btn-sm" style="width:100%;" onclick="openMoveOutModal(\''+tenantId+'\')"><i class="fas fa-dolly"></i> Initiate Move-Out</button>';
+    } else if (tenant.rejectionReason) {
+      moveOutContent.innerHTML = '<p style="font-size:0.82rem;color:var(--gray-500);"><strong>Rejected:</strong> '+tenant.rejectionReason+'</p>';
+    } else {
+      moveOutContent.innerHTML = '<p style="font-size:0.82rem;color:var(--gray-400);font-style:italic;">Tenant has moved out'+(tenant.moveOutDate ? (' on '+formatDate(tenant.moveOutDate)) : '')+'.</p>';
+    }
+  }
 
   // Vehicle
   if (tenant.vehicle) {
@@ -216,6 +283,134 @@ function closeTenantPanel() {
   document.getElementById('tenantPanel').classList.remove('open');
   document.getElementById('panelOverlay').classList.remove('show');
   _panelTenantId = null;
+}
+
+// ── Price Lock ────────────────────────────────────────────────────────────
+async function togglePriceLock(tenantId) {
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  var newVal = !tenant.priceLocked;
+  try {
+    await YB.saveTenant({ id: tenantId, priceLocked: newVal });
+    tenant.priceLocked = newVal;
+    showToast(newVal ? 'Rate locked for '+tenant.name : 'Rate unlocked for '+tenant.name, 'success');
+  } catch (err) {
+    tenant.priceLocked = newVal;
+    showToast('Rate '+(newVal?'locked':'unlocked')+' (offline)', 'warning');
+  }
+  renderTenantsTable();
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+// ── Move-Out workflow ─────────────────────────────────────────────────────
+function openMoveOutModal(tenantId) {
+  document.getElementById('moMoveOutDate').value = '';
+  document.getElementById('confirmMoveOutModalBtn').dataset.tenantId = tenantId;
+  document.getElementById('moveOutModal').classList.add('open');
+}
+
+async function handleMoveOutSubmit() {
+  var tenantId = document.getElementById('confirmMoveOutModalBtn').dataset.tenantId;
+  var date = document.getElementById('moMoveOutDate').value;
+  if (!date) { showToast('Please select an expected vacate date.', 'error'); return; }
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  try {
+    await YB.saveTenant({ id: tenantId, status: 'moveout', moveOutDate: date });
+    tenant.status = 'moveout';
+    tenant.moveOutDate = date;
+    showToast('Move-out initiated for '+tenant.name, 'success');
+  } catch (err) {
+    tenant.status = 'moveout';
+    tenant.moveOutDate = date;
+    showToast('Move-out initiated (offline)', 'warning');
+  }
+  document.getElementById('moveOutModal').classList.remove('open');
+  updateTabCounts();
+  renderTenantsTable();
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+async function cancelMoveOut(tenantId) {
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  try {
+    await YB.saveTenant({ id: tenantId, status: 'active', moveOutDate: null });
+    tenant.status = 'active';
+    tenant.moveOutDate = null;
+    showToast('Move-out cancelled for '+tenant.name, 'success');
+  } catch (err) {
+    tenant.status = 'active';
+    tenant.moveOutDate = null;
+    showToast('Move-out cancelled (offline)', 'warning');
+  }
+  updateTabCounts();
+  renderTenantsTable();
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+async function confirmMoveOut(tenantId) {
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  var endDate = tenant.moveOutDate || new Date().toISOString().split('T')[0];
+  try {
+    await YB.saveTenant({ id: tenantId, status: 'past', endDate: endDate });
+    tenant.status = 'past';
+    tenant.endDate = endDate;
+    showToast(tenant.name+' moved out', 'success');
+  } catch (err) {
+    tenant.status = 'past';
+    tenant.endDate = endDate;
+    showToast('Tenant moved out (offline)', 'warning');
+  }
+  updateTabCounts();
+  renderTenantsTable();
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+// ── Pending Approval workflow ────────────────────────────────────────────
+async function approveTenant(tenantId) {
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  var fields = { id: tenantId, status: 'active', registrationStatus: 'verified' };
+  if (!tenant.startDate) fields.startDate = new Date().toISOString().split('T')[0];
+  try {
+    await YB.saveTenant(fields);
+    Object.assign(tenant, fields);
+    showToast('Booking approved for '+tenant.name, 'success');
+  } catch (err) {
+    Object.assign(tenant, fields);
+    showToast('Booking approved (offline)', 'warning');
+  }
+  updateTabCounts();
+  renderTenantsTable();
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+function openRejectModal(tenantId) {
+  document.getElementById('rejReason').value = '';
+  document.getElementById('confirmRejectModalBtn').dataset.tenantId = tenantId;
+  document.getElementById('rejectModal').classList.add('open');
+}
+
+async function handleRejectSubmit() {
+  var tenantId = document.getElementById('confirmRejectModalBtn').dataset.tenantId;
+  var reason = document.getElementById('rejReason').value.trim() || null;
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  var fields = { id: tenantId, status: 'past', rejectionReason: reason };
+  try {
+    await YB.saveTenant(fields);
+    Object.assign(tenant, fields);
+    showToast('Booking rejected for '+tenant.name, 'success');
+  } catch (err) {
+    Object.assign(tenant, fields);
+    showToast('Booking rejected (offline)', 'warning');
+  }
+  document.getElementById('rejectModal').classList.remove('open');
+  updateTabCounts();
+  renderTenantsTable();
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
 }
 
 // ── Receipt helpers ───────────────────────────────────────────────────────
@@ -578,14 +773,15 @@ async function handleWalkInSubmit(e) {
 function exportTenants() {
   var list = getFilteredTenants();
   exportToCSV(
-    ['Name','Email','Phone','Company','Lot','Space','Rate/Mo','Start','End','Status','Truck#','Trailer#','Plate','PlateState','InsurancePolicy','InsuranceCompany','InsuranceExp','AutoRenew','PaymentMethod'],
+    ['Name','Email','Phone','Company','Lot','Space','Rate/Mo','Start','End','Status','Truck#','Trailer#','Plate','PlateState','InsurancePolicy','InsuranceCompany','InsuranceExp','AutoRenew','PaymentMethod','PriceLocked','MoveOutDate','RejectionReason'],
     list.map(function(t){ return [
       t.name, t.email, t.phone, t.company, getLotName(t.lotId),
       t.spaceNumber, t.monthlyRate, t.startDate, t.endDate, t.status,
       t.truckNumber||'', t.trailerNumber||'',
       (t.vehicle?t.vehicle.plate:''), t.plateState||'',
       t.insurancePolicyNumber||'', t.insuranceCompany||'', t.insuranceExpDate||'',
-      t.autoRenew?'Yes':'No', t.paymentMethod||'manual'
+      t.autoRenew?'Yes':'No', t.paymentMethod||'manual',
+      t.priceLocked?'Yes':'No', t.moveOutDate||'', t.rejectionReason||''
     ]; }),
     'tenants-'+currentTab+'.csv'
   );
@@ -663,6 +859,18 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Scan insurance button
   document.getElementById('atScanBtn').addEventListener('click', scanInsurance);
 
+  // Move-Out modal
+  document.getElementById('closeMoveOutModal').addEventListener('click', function(){ document.getElementById('moveOutModal').classList.remove('open'); });
+  document.getElementById('cancelMoveOutModal').addEventListener('click', function(){ document.getElementById('moveOutModal').classList.remove('open'); });
+  document.getElementById('moveOutModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+  document.getElementById('confirmMoveOutModalBtn').addEventListener('click', handleMoveOutSubmit);
+
+  // Reject modal
+  document.getElementById('closeRejectModal').addEventListener('click', function(){ document.getElementById('rejectModal').classList.remove('open'); });
+  document.getElementById('cancelRejectModal').addEventListener('click', function(){ document.getElementById('rejectModal').classList.remove('open'); });
+  document.getElementById('rejectModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+  document.getElementById('confirmRejectModalBtn').addEventListener('click', handleRejectSubmit);
+
   // Message modal
   document.getElementById('sendMsgBtn').addEventListener('click', sendMessage);
   document.getElementById('closeMsgModal').addEventListener('click', function(){ document.getElementById('msgModal').classList.remove('open'); });
@@ -724,6 +932,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       closeTenantPanel();
       document.getElementById('walkInModal').classList.remove('open');
       document.getElementById('broadcastModal').classList.remove('open');
+      document.getElementById('moveOutModal').classList.remove('open');
+      document.getElementById('rejectModal').classList.remove('open');
     }
   });
 });

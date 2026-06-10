@@ -54,10 +54,18 @@ async function runMigrations() {
       autopay_card            TEXT,
       autopay_next_date       DATE,
       payments                JSONB DEFAULT '[]',
+      price_locked            BOOLEAN DEFAULT false,
+      move_out_date           DATE,
+      rejection_reason        TEXT,
       created_at              TIMESTAMPTZ DEFAULT NOW(),
       updated_at              TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+
+  // ── Tenant lifecycle columns (idempotent for pre-existing tables) ────────
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS price_locked BOOLEAN DEFAULT false`);
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS move_out_date DATE`);
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS rejection_reason TEXT`);
 
   console.log('[migrate] Tables ready.');
 
