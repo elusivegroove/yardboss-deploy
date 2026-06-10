@@ -1130,6 +1130,46 @@ function getLot(id) { return APP_DATA.lots.find(function(l){ return l.id===id; }
 function getLotName(id) { var l=getLot(id); return l?l.name:'—'; }
 function getTenant(id) { return APP_DATA.tenants.find(function(t){ return t.id===id; }); }
 
+// ── Billing / Customer Ledger ──────────────────────────────────────────────
+// tenant.payments[] entries are ledger lines: type 'charge' (amount owed) or
+// 'payment' (amount received). Entries with no `type` are treated as
+// payments, for compatibility with existing seed data.
+function computeTenantBalance(tenant) {
+  var balance = 0;
+  (tenant.payments || []).forEach(function(p) {
+    balance += (p.type === 'charge') ? Number(p.amount) : -Number(p.amount);
+  });
+  return Math.round(balance * 100) / 100;
+}
+
+function getReceivables() {
+  return APP_DATA.tenants
+    .map(function(t){ return { tenant: t, balance: computeTenantBalance(t) }; })
+    .filter(function(r){ return r.balance > 0.005; })
+    .sort(function(a,b){ return b.balance - a.balance; });
+}
+
+function getTotalReceivables() {
+  return getReceivables().reduce(function(s,r){ return s + r.balance; }, 0);
+}
+
+function getPaymentLinkUrl(tenantId) {
+  return window.location.origin + '/portal/pay.html?t=' + encodeURIComponent(tenantId);
+}
+
+function copyPaymentLink(tenantId) {
+  var tenant = getTenant(tenantId);
+  var url = getPaymentLinkUrl(tenantId);
+  var label = tenant ? ' for ' + tenant.name : '';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function(){
+      showToast('Payment link' + label + ' copied to clipboard', 'success');
+    }).catch(function(){ showToast('Payment link: ' + url, 'info'); });
+  } else {
+    showToast('Payment link: ' + url, 'info');
+  }
+}
+
 function formatCurrency(n) {
   if (n==null||isNaN(n)) return '$0';
   return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});

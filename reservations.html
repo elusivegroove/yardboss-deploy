@@ -140,7 +140,13 @@
   </div>
 
   <div class="panel-section">
-    <h4>Payment History</h4>
+    <h4>Customer Ledger</h4>
+    <div class="panel-info-row"><span class="label">Account Balance</span><span class="value" id="panelBalance">-</span></div>
+    <div style="display:flex;gap:8px;margin:10px 0;">
+      <button class="btn btn-secondary btn-sm" style="flex:1;" id="panelAddChargeBtn"><i class="fas fa-receipt"></i> Add Charge</button>
+      <button class="btn btn-secondary btn-sm" style="flex:1;" id="panelRecordPaymentBtn"><i class="fas fa-money-bill-wave"></i> Record Payment</button>
+      <button class="btn btn-secondary btn-sm btn-icon" id="panelPayLinkBtn" title="Copy Payment Link"><i class="fas fa-link"></i></button>
+    </div>
     <div id="panelPayments"></div>
   </div>
 
@@ -648,6 +654,43 @@
       <button type="button" class="btn btn-secondary" id="cancelRejectModal">Cancel</button>
       <button type="button" class="btn btn-primary" id="confirmRejectModalBtn" style="background:#ef4444;border-color:#ef4444;"><i class="fas fa-ban"></i> Reject Booking</button>
     </div>
+  </div>
+</div>
+
+<!-- ── Add Charge / Record Payment Modal ───────────────────────────────────── -->
+<div class="modal-backdrop" id="ledgerEntryModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="ledgerEntryModalTitle"><i class="fas fa-receipt" style="margin-right:8px;color:var(--teal);"></i>Add Charge</h3>
+      <button class="modal-close" id="closeLedgerEntryModal"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="ledgerEntryForm">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="leDate" required>
+      </div>
+      <div class="form-group">
+        <label>Amount ($)</label>
+        <input type="number" id="leAmount" min="0.01" step="0.01" required>
+      </div>
+      <div class="form-group" id="leDescriptionGroup">
+        <label>Description</label>
+        <input type="text" id="leDescription" placeholder="e.g. June Rent">
+      </div>
+      <div class="form-group" id="leMethodGroup" style="display:none;">
+        <label>Method</label>
+        <select id="leMethod">
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="check">Check</option>
+          <option value="manual">Other</option>
+        </select>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn btn-secondary" id="cancelLedgerEntryModal">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="ledgerEntrySubmitBtn"><i class="fas fa-save"></i> Add Charge</button>
+      </div>
+    </form>
   </div>
 </div>
 

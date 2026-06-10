@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Billing Center — YardBoss</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/charts.css">
+<script>!function(){var t=localStorage.getItem("yb-theme");t&&"light"!==t&&document.documentElement.setAttribute("data-theme",t)}();</script>
+</head>
+<body>
+
+<div id="nav-placeholder"></div>
+
+<!-- Command Strip -->
+<div class="cmd-strip">
+  <span class="cmd-title"><i class="fas fa-file-invoice-dollar" style="color:var(--teal);margin-right:6px;"></i>Billing Center</span>
+  <div class="cmd-divider"></div>
+  <div class="cmd-breadcrumb"><span class="current">Receivables</span></div>
+  <div class="cmd-actions">
+    <input type="text" id="billingSearch" placeholder="Search name, company..." class="cmd-yard-select" style="min-width:220px;">
+    <button class="cmd-btn" id="exportBillingBtn"><i class="fas fa-download"></i> Export</button>
+  </div>
+</div>
+
+<!-- Page Content -->
+<main class="page-content">
+
+  <!-- KPI Strip -->
+  <div class="kpi-strip mb-6" id="billingKpiStrip"></div>
+
+  <!-- Receivables Table -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Outstanding Balances</div>
+        <div class="card-subtitle">Tenants who currently owe a balance, sorted highest first</div>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Tenant</th>
+            <th>Lot / Space</th>
+            <th>Balance Due</th>
+            <th>Payment Method</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="billingTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/api.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="js/billing.js"></script>
+</body>
+</html>

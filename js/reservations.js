@@ -249,9 +249,34 @@ function openTenantPanel(tenantId) {
   autoPayWrap.style.display = isAutopay ? 'block' : 'none';
   document.getElementById('panelRunAutopayBtn').onclick = function() { runAutoPay(tenantId); };
 
-  // Payment history
+  // Customer Ledger — account balance
+  var balance = computeTenantBalance(tenant);
+  var balanceEl = document.getElementById('panelBalance');
+  if (balance > 0.005) {
+    balanceEl.innerHTML = '<span class="badge badge-red">'+formatCurrency(balance)+' due</span>';
+  } else if (balance < -0.005) {
+    balanceEl.innerHTML = '<span class="badge badge-blue">'+formatCurrency(Math.abs(balance))+' credit</span>';
+  } else {
+    balanceEl.innerHTML = '<span class="badge badge-green">Paid in full</span>';
+  }
+  document.getElementById('panelAddChargeBtn').onclick = function(){ openLedgerEntryModal(tenantId, 'charge'); };
+  document.getElementById('panelRecordPaymentBtn').onclick = function(){ openLedgerEntryModal(tenantId, 'payment'); };
+  document.getElementById('panelPayLinkBtn').onclick = function(){ copyPaymentLink(tenantId); };
+
+  // Payment / charge history
   var payments = tenant.payments || [];
   var paymentsHtml = payments.map(function(p, pi) {
+    if (p.type === 'charge') {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">'
+        +'<div style="display:flex;flex-direction:column;gap:2px;">'
+        +'<span style="font-size:0.82rem;color:var(--gray-500);">'+formatDate(p.date)+'</span>'
+        +'<span style="font-size:0.72rem;color:var(--gray-400);">'+(p.description||'Charge')+'</span>'
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:5px;">'
+        +'<span style="font-weight:600;font-size:0.875rem;color:#ef4444;">+'+formatCurrency(p.amount)+'</span>'
+        +'<span class="badge badge-orange">Charge</span>'
+        +'</div></div>';
+    }
     var cls = p.status==='paid'?'badge-green':p.status==='late'?'badge-yellow':'badge-red';
     var methodIcon = p.method==='autopay'
       ? '<i class="fas fa-credit-card" style="margin-right:3px;color:var(--teal);font-size:0.7rem;"></i>'
@@ -270,7 +295,7 @@ function openTenantPanel(tenantId) {
   }).join('');
 
   document.getElementById('panelPayments').innerHTML = paymentsHtml
-    || '<p style="color:var(--gray-400);font-size:0.82rem;padding:8px 0;">No payment history</p>';
+    || '<p style="color:var(--gray-400);font-size:0.82rem;padding:8px 0;">No ledger entries yet</p>';
 
   document.getElementById('panelMessageBtn').onclick = function() { openMessageModal(tenantId); };
   document.getElementById('panelEditBtn').onclick = function() { openEditTenantModal(tenantId); };
@@ -410,6 +435,63 @@ async function handleRejectSubmit() {
   document.getElementById('rejectModal').classList.remove('open');
   updateTabCounts();
   renderTenantsTable();
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+// ── Customer Ledger — Add Charge / Record Payment ────────────────────────
+var _ledgerEntryType = 'charge';
+
+function openLedgerEntryModal(tenantId, type) {
+  _ledgerEntryType = type;
+  var form = document.getElementById('ledgerEntryForm');
+  form.reset();
+  form.dataset.tenantId = tenantId;
+  document.getElementById('leDate').value = new Date().toISOString().split('T')[0];
+
+  var isCharge = type === 'charge';
+  document.getElementById('ledgerEntryModalTitle').innerHTML = isCharge
+    ? '<i class="fas fa-receipt" style="margin-right:8px;color:var(--teal);"></i>Add Charge'
+    : '<i class="fas fa-money-bill-wave" style="margin-right:8px;color:var(--teal);"></i>Record Payment';
+  document.getElementById('leDescriptionGroup').style.display = isCharge ? '' : 'none';
+  document.getElementById('leMethodGroup').style.display = isCharge ? 'none' : '';
+  document.getElementById('ledgerEntrySubmitBtn').innerHTML = isCharge
+    ? '<i class="fas fa-save"></i> Add Charge'
+    : '<i class="fas fa-save"></i> Record Payment';
+
+  document.getElementById('ledgerEntryModal').classList.add('open');
+}
+
+async function handleLedgerEntrySubmit(e) {
+  e.preventDefault();
+  var form = document.getElementById('ledgerEntryForm');
+  var tenantId = form.dataset.tenantId;
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+
+  var date = document.getElementById('leDate').value;
+  var amount = parseFloat(document.getElementById('leAmount').value);
+  if (!date || !amount || amount <= 0) { showToast('Please enter a valid date and amount.', 'error'); return; }
+
+  var entry;
+  if (_ledgerEntryType === 'charge') {
+    var description = document.getElementById('leDescription').value.trim() || 'Charge';
+    entry = { date: date, amount: amount, type: 'charge', description: description };
+  } else {
+    var method = document.getElementById('leMethod').value;
+    entry = { date: date, amount: amount, status: 'paid', method: method, type: 'payment' };
+  }
+
+  try {
+    var updated = await YB.addPayment(tenantId, entry);
+    tenant.payments = updated.payments;
+    showToast((_ledgerEntryType==='charge' ? 'Charge added for ' : 'Payment recorded for ')+tenant.name, 'success');
+  } catch (err) {
+    tenant.payments = tenant.payments || [];
+    tenant.payments.unshift(entry);
+    showToast((_ledgerEntryType==='charge' ? 'Charge added' : 'Payment recorded')+' (offline)', 'warning');
+  }
+
+  document.getElementById('ledgerEntryModal').classList.remove('open');
   if (_panelTenantId === tenantId) openTenantPanel(tenantId);
 }
 
@@ -773,7 +855,7 @@ async function handleWalkInSubmit(e) {
 function exportTenants() {
   var list = getFilteredTenants();
   exportToCSV(
-    ['Name','Email','Phone','Company','Lot','Space','Rate/Mo','Start','End','Status','Truck#','Trailer#','Plate','PlateState','InsurancePolicy','InsuranceCompany','InsuranceExp','AutoRenew','PaymentMethod','PriceLocked','MoveOutDate','RejectionReason'],
+    ['Name','Email','Phone','Company','Lot','Space','Rate/Mo','Start','End','Status','Truck#','Trailer#','Plate','PlateState','InsurancePolicy','InsuranceCompany','InsuranceExp','AutoRenew','PaymentMethod','PriceLocked','MoveOutDate','RejectionReason','Balance'],
     list.map(function(t){ return [
       t.name, t.email, t.phone, t.company, getLotName(t.lotId),
       t.spaceNumber, t.monthlyRate, t.startDate, t.endDate, t.status,
@@ -781,7 +863,8 @@ function exportTenants() {
       (t.vehicle?t.vehicle.plate:''), t.plateState||'',
       t.insurancePolicyNumber||'', t.insuranceCompany||'', t.insuranceExpDate||'',
       t.autoRenew?'Yes':'No', t.paymentMethod||'manual',
-      t.priceLocked?'Yes':'No', t.moveOutDate||'', t.rejectionReason||''
+      t.priceLocked?'Yes':'No', t.moveOutDate||'', t.rejectionReason||'',
+      computeTenantBalance(t)
     ]; }),
     'tenants-'+currentTab+'.csv'
   );
@@ -871,6 +954,12 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('rejectModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
   document.getElementById('confirmRejectModalBtn').addEventListener('click', handleRejectSubmit);
 
+  // Ledger entry modal (Add Charge / Record Payment)
+  document.getElementById('closeLedgerEntryModal').addEventListener('click', function(){ document.getElementById('ledgerEntryModal').classList.remove('open'); });
+  document.getElementById('cancelLedgerEntryModal').addEventListener('click', function(){ document.getElementById('ledgerEntryModal').classList.remove('open'); });
+  document.getElementById('ledgerEntryModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+  document.getElementById('ledgerEntryForm').addEventListener('submit', handleLedgerEntrySubmit);
+
   // Message modal
   document.getElementById('sendMsgBtn').addEventListener('click', sendMessage);
   document.getElementById('closeMsgModal').addEventListener('click', function(){ document.getElementById('msgModal').classList.remove('open'); });
@@ -926,6 +1015,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     openWalkInModal();
   }
 
+  // Auto-open tenant panel if URL has ?tenant=<id> (e.g. from Billing Center)
+  var tenantParam = new URLSearchParams(window.location.search).get('tenant');
+  if (tenantParam && getTenant(tenantParam)) {
+    openTenantPanel(tenantParam);
+  }
+
   // Escape key
   document.addEventListener('keydown', function(e) {
     if (e.key==='Escape') {
@@ -934,6 +1029,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       document.getElementById('broadcastModal').classList.remove('open');
       document.getElementById('moveOutModal').classList.remove('open');
       document.getElementById('rejectModal').classList.remove('open');
+      document.getElementById('ledgerEntryModal').classList.remove('open');
     }
   });
 });

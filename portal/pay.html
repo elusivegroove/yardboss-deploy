@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Make a Payment — YardBoss</title>
+  <link rel="stylesheet" href="css/portal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script>!function(){var t=localStorage.getItem("yb-theme");t&&"light"!==t&&document.documentElement.setAttribute("data-theme",t)}();</script>
+</head>
+<body>
+<nav class="portal-nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon"><i class="fas fa-truck"></i></div>
+    <span class="nav-logo-text">YardBoss</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html#lots" class="nav-link">Locations</a>
+    <a href="lookup.html" class="nav-link">My Reservation</a>
+  </div>
+</nav>
+
+<div class="confirm-wrapper">
+  <div class="confirm-card" id="payCard">
+
+    <div id="payLoading" style="padding:30px 0;">
+      <i class="fas fa-spinner fa-spin" style="font-size:1.6rem;color:var(--teal);"></i>
+      <p style="color:var(--gray-500);margin-top:12px;">Loading your account...</p>
+    </div>
+
+    <div id="payContent" style="display:none;">
+      <div class="confirm-icon" id="payIcon" style="background:var(--gray-50);color:var(--navy);">
+        <i class="fas fa-file-invoice-dollar"></i>
+      </div>
+      <h2 id="payTenantName">—</h2>
+      <p class="confirm-sub" id="paySpace">—</p>
+
+      <div class="confirm-ref" style="margin-bottom:8px;">
+        <div class="confirm-ref-label">Amount Due</div>
+        <div class="confirm-ref-id" id="payAmount">$0.00</div>
+      </div>
+
+      <p id="payMessage" style="color:var(--gray-500);font-size:0.9rem;margin-bottom:24px;"></p>
+
+      <button class="btn-primary" id="payNowBtn" style="border:none;cursor:pointer;width:100%;font-size:1rem;">
+        <i class="fas fa-lock"></i> Pay Now
+      </button>
+    </div>
+
+    <div id="payError" style="display:none;padding:20px 0;">
+      <div class="confirm-icon" style="background:var(--red-bg, #fee2e2);color:#b91c1c;">
+        <i class="fas fa-exclamation-triangle"></i>
+      </div>
+      <h2>Unable to Load Payment</h2>
+      <p class="confirm-sub" id="payErrorMsg">This payment link is invalid or has expired. Please contact the office at <strong>(713) 555-0142</strong>.</p>
+    </div>
+
+  </div>
+</div>
+
+<footer class="portal-footer" style="margin-top:40px;">
+  <div class="footer-logo"><i class="fas fa-truck"></i> YardBoss</div>
+  <p>&copy; 2025 Thompson Yard Management LLC</p>
+</footer>
+
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var tenantId = params.get('t');
+
+  var loadingEl = document.getElementById('payLoading');
+  var contentEl = document.getElementById('payContent');
+  var errorEl   = document.getElementById('payError');
+
+  if (!tenantId) {
+    showError('Missing payment link reference.');
+    return;
+  }
+
+  fetch('/api/tenants/' + encodeURIComponent(tenantId))
+    .then(function (res) {
+      if (!res.ok) throw new Error('not found');
+      return res.json();
+    })
+    .then(render)
+    .catch(function () { showError(); });
+
+  function showError(msg) {
+    loadingEl.style.display = 'none';
+    if (msg) document.getElementById('payErrorMsg').textContent = msg;
+    errorEl.style.display = '';
+  }
+
+  function fmt(n) {
+    return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function computeBalance(tenant) {
+    var balance = 0;
+    (tenant.payments || []).forEach(function (p) {
+      balance += (p.type === 'charge') ? Number(p.amount) : -Number(p.amount);
+    });
+    return Math.round(balance * 100) / 100;
+  }
+
+  function render(tenant) {
+    var balance = computeBalance(tenant);
+
+    document.getElementById('payTenantName').textContent = tenant.name;
+    document.getElementById('paySpace').textContent = (tenant.company ? tenant.company + ' — ' : '') + 'Space ' + (tenant.spaceNumber || '—');
+
+    if (balance <= 0.005) {
+      document.getElementById('payAmount').textContent = '$0.00';
+      document.getElementById('payAmount').style.color = 'var(--teal)';
+      document.getElementById('payMessage').textContent = 'Your account is paid in full — there is nothing due right now.';
+      document.getElementById('payNowBtn').style.display = 'none';
+      var icon = document.getElementById('payIcon');
+      icon.style.background = 'var(--green-bg)';
+      icon.style.color = '#16a34a';
+      icon.innerHTML = '<i class="fas fa-check"></i>';
+    } else {
+      document.getElementById('payAmount').textContent = fmt(balance);
+      document.getElementById('payMessage').textContent = 'You can securely pay your balance online below.';
+      var btn = document.getElementById('payNowBtn');
+      btn.innerHTML = '<i class="fas fa-lock"></i> Pay ' + fmt(balance) + ' Now';
+      btn.onclick = function () { payNow(tenant, balance); };
+    }
+
+    loadingEl.style.display = 'none';
+    contentEl.style.display = '';
+  }
+
+  function payNow(tenant, amount) {
+    var btn = document.getElementById('payNowBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+    fetch('/api/tenants/' + encodeURIComponent(tenant.id))
+      .then(function (r) { return r.json(); })
+      .then(function (fresh) {
+        var payment = {
+          date: new Date().toISOString().split('T')[0],
+          amount: amount,
+          status: 'paid',
+          method: 'card',
+          type: 'payment',
+          description: 'Online payment'
+        };
+        var payments = [payment].concat(fresh.payments || []);
+        return fetch('/api/tenants/' + encodeURIComponent(tenant.id), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ payments: payments })
+        });
+      })
+      .then(function (r) { if (!r.ok) throw new Error('failed'); return r.json(); })
+      .then(function () {
+        document.getElementById('payIcon').style.background = 'var(--green-bg)';
+        document.getElementById('payIcon').style.color = '#16a34a';
+        document.getElementById('payIcon').innerHTML = '<i class="fas fa-check"></i>';
+        document.getElementById('payTenantName').textContent = 'Payment Successful';
+        document.getElementById('paySpace').textContent = 'Thank you, ' + tenant.name + '!';
+        document.getElementById('payAmount').textContent = fmt(amount);
+        document.getElementById('payMessage').textContent = 'Your payment has been received and applied to your account.';
+        btn.style.display = 'none';
+      })
+      .catch(function () {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-lock"></i> Pay ' + fmt(amount) + ' Now';
+        document.getElementById('payMessage').textContent = 'Payment could not be processed. Please try again or contact the office.';
+        document.getElementById('payMessage').style.color = '#b91c1c';
+      });
+  }
+})();
+</script>
+</body>
+</html>

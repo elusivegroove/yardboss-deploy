@@ -69,9 +69,7 @@ function computeKPIs(filter) {
 
   let outstanding = 0;
   tenants.forEach(function (t) {
-    t.payments.forEach(function (p) {
-      if (p.status === 'overdue') outstanding += p.amount;
-    });
+    outstanding += Math.max(0, computeTenantBalance(t));
   });
 
   const lastMonth = 10;
@@ -109,9 +107,10 @@ function renderKPIs(filter) {
       sub: 'Upcoming departures'
     },
     {
-      label: 'Outstanding', value: formatCurrency(kpis.outstanding),
+      label: 'Receivables Due', value: formatCurrency(kpis.outstanding),
       icon: 'fa-dollar-sign', tileClass: 'red',
-      sub: 'Overdue balances'
+      sub: 'Outstanding balances',
+      clickable: true, modalFn: 'openReceivablesModal'
     },
     {
       label: 'Monthly Revenue', value: formatCurrency(kpis.monthlyRevenue),
@@ -127,7 +126,7 @@ function renderKPIs(filter) {
       label: 'Renewals Due', value: kpis.renewalsDue,
       icon: 'fa-sync-alt', tileClass: 'yellow',
       sub: 'Auto-renew this week',
-      clickable: true
+      clickable: true, modalFn: 'openRenewalsDueModal'
     },
     {
       label: 'Auto-Pay Active', value: kpis.autoPayActive,
@@ -137,7 +136,7 @@ function renderKPIs(filter) {
   ];
 
   strip.innerHTML = tiles.map(function(t) {
-    var click = t.clickable ? ' style="cursor:pointer;" onclick="openRenewalsDueModal()"' : '';
+    var click = t.clickable ? ' style="cursor:pointer;" onclick="' + t.modalFn + '()"' : '';
     return '<div class="kpi-tile ' + t.tileClass + '"' + click + '>' +
       '<div class="kpi-bg-icon"><i class="fas ' + t.icon + '"></i></div>' +
       '<div class="kpi-label">' + t.label + '</div>' +
@@ -185,6 +184,37 @@ function renewNow(tenantId) {
   renderRenewalsDueList();
   var filter = document.getElementById('yardSelector') ? document.getElementById('yardSelector').value : 'all';
   renderKPIs(filter);
+}
+
+// ── Receivables Due Modal ─────────────────────────────────────────────────
+function openReceivablesModal() {
+  var modal = document.getElementById('receivablesModal');
+  if (!modal) return;
+  renderReceivablesList();
+  modal.classList.add('open');
+}
+
+function renderReceivablesList() {
+  var list = document.getElementById('receivablesList');
+  if (!list) return;
+  var due = (typeof getReceivables === 'function') ? getReceivables() : [];
+  if (!due.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:0.875rem;"><i class="fas fa-check-circle" style="font-size:2rem;color:#22c55e;display:block;margin-bottom:8px;"></i>No outstanding balances. Everyone is paid up!</div>';
+    return;
+  }
+  list.innerHTML = due.map(function(r) {
+    var t = r.tenant;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--gray-100);">'
+      +'<div>'
+      +'<div style="font-weight:700;color:var(--navy);font-size:0.875rem;">'+t.name+'</div>'
+      +'<div style="font-size:0.78rem;color:var(--gray-400);">'+t.company+' &nbsp;·&nbsp; Space '+t.spaceNumber+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +'<span class="badge badge-red">'+formatCurrency(r.balance)+' due</span>'
+      +'<button class="btn btn-secondary btn-sm btn-icon" title="Copy Payment Link" onclick="copyPaymentLink(\''+t.id+'\')"><i class="fas fa-link"></i></button>'
+      +'<button class="btn btn-primary btn-sm" onclick="window.location.href=\'reservations.html?tenant='+t.id+'\'"><i class="fas fa-book"></i> Ledger</button>'
+      +'</div></div>';
+  }).join('');
 }
 
 function getRevenueDatasets(filter) {
