@@ -32,6 +32,11 @@ async function getLotsFromDB() {
   return result.rows.map(rowToLot);
 }
 
+// Number of spaces a tenant occupies: their primary space plus any additional ones.
+function spacesPerTenant(spaceNumber, additionalSpaces) {
+  return (spaceNumber ? 1 : 0) + (Array.isArray(additionalSpaces) ? additionalSpaces.length : 0);
+}
+
 // GET /api/lots — all lots with occupancy stats
 router.get('/', async (req, res) => {
   try {
@@ -41,18 +46,20 @@ router.get('/', async (req, res) => {
     let occupancyMap = {};
     if (process.env.DATABASE_URL) {
       const tenantRes = await db.query(
-        "SELECT lot_id, status FROM tenants"
+        "SELECT lot_id, status, space_number, additional_spaces FROM tenants"
       );
       tenantRes.rows.forEach(function(row) {
         if (!occupancyMap[row.lot_id]) occupancyMap[row.lot_id] = { occupied: 0, reserved: 0 };
-        if (row.status === 'active')  occupancyMap[row.lot_id].occupied++;
-        if (row.status === 'pending') occupancyMap[row.lot_id].reserved++;
+        const spaceCount = spacesPerTenant(row.space_number, row.additional_spaces);
+        if (row.status === 'active')  occupancyMap[row.lot_id].occupied += spaceCount;
+        if (row.status === 'pending') occupancyMap[row.lot_id].reserved += spaceCount;
       });
     } else {
       reservations.forEach(function(r) {
         if (!occupancyMap[r.lotId]) occupancyMap[r.lotId] = { occupied: 0, reserved: 0 };
-        if (r.status === 'active')  occupancyMap[r.lotId].occupied++;
-        if (r.status === 'pending') occupancyMap[r.lotId].reserved++;
+        const spaceCount = spacesPerTenant(r.spaceNumber, r.additionalSpaces);
+        if (r.status === 'active')  occupancyMap[r.lotId].occupied += spaceCount;
+        if (r.status === 'pending') occupancyMap[r.lotId].reserved += spaceCount;
       });
     }
 
@@ -89,15 +96,19 @@ router.get('/:id', async (req, res) => {
     let occupied = 0, reserved = 0;
     if (process.env.DATABASE_URL) {
       const tr = await db.query(
-        "SELECT status FROM tenants WHERE lot_id = $1", [req.params.id]
+        "SELECT status, space_number, additional_spaces FROM tenants WHERE lot_id = $1", [req.params.id]
       );
       tr.rows.forEach(function(row) {
-        if (row.status === 'active')  occupied++;
-        if (row.status === 'pending') reserved++;
+        const spaceCount = spacesPerTenant(row.space_number, row.additional_spaces);
+        if (row.status === 'active')  occupied += spaceCount;
+        if (row.status === 'pending') reserved += spaceCount;
       });
     } else {
-      occupied = reservations.filter(function(r){ return r.lotId === lot.id && r.status === 'active'; }).length;
-      reserved = reservations.filter(function(r){ return r.lotId === lot.id && r.status === 'pending'; }).length;
+      reservations.filter(function(r){ return r.lotId === lot.id; }).forEach(function(r) {
+        const spaceCount = spacesPerTenant(r.spaceNumber, r.additionalSpaces);
+        if (r.status === 'active')  occupied += spaceCount;
+        if (r.status === 'pending') reserved += spaceCount;
+      });
     }
 
     res.json(Object.assign({}, lot, {
@@ -128,14 +139,20 @@ router.get('/:id/availability', async (req, res) => {
     let takenSpaces = [];
     if (process.env.DATABASE_URL) {
       const tr = await db.query(
-        "SELECT space_number FROM tenants WHERE lot_id = $1 AND status IN ('active','pending')",
+        "SELECT space_number, additional_spaces FROM tenants WHERE lot_id = $1 AND status IN ('active','pending')",
         [req.params.id]
       );
-      takenSpaces = tr.rows.map(function(r){ return r.space_number; });
+      tr.rows.forEach(function(r) {
+        if (r.space_number) takenSpaces.push(r.space_number);
+        (r.additional_spaces || []).forEach(function(sp){ takenSpaces.push(sp); });
+      });
     } else {
-      takenSpaces = reservations
+      reservations
         .filter(function(r){ return r.lotId === req.params.id && (r.status === 'active' || r.status === 'pending'); })
-        .map(function(r){ return r.spaceNumber; });
+        .forEach(function(r) {
+          if (r.spaceNumber) takenSpaces.push(r.spaceNumber);
+          (r.additionalSpaces || []).forEach(function(sp){ takenSpaces.push(sp); });
+        });
     }
 
     const spaces = [];

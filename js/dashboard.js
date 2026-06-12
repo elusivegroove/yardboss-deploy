@@ -56,7 +56,7 @@ function computeKPIs(filter) {
 
   const totalSpaces = lots.reduce(function (s, l) { return s + l.totalSpaces; }, 0);
   const activeTenants = tenants.filter(function (t) { return t.status === 'active'; });
-  const occupied = activeTenants.length;
+  const occupied = activeTenants.reduce(function (s, t) { return s + getTenantSpaceNumbers(t).length; }, 0);
   const vacant = totalSpaces - occupied;
   const occupancyRate = totalSpaces > 0 ? Math.round((occupied / totalSpaces) * 100) : 0;
 
@@ -169,7 +169,7 @@ function renderRenewalsDueList() {
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--gray-100);">'
       +'<div>'
       +'<div style="font-weight:700;color:var(--navy);font-size:0.875rem;">'+t.name+'</div>'
-      +'<div style="font-size:0.78rem;color:var(--gray-400);">'+t.company+' &nbsp;·&nbsp; Space '+t.spaceNumber+'</div>'
+      +'<div style="font-size:0.78rem;color:var(--gray-400);">'+t.company+' &nbsp;·&nbsp; Space '+getTenantSpaceNumbers(t).join(', ')+'</div>'
       +'<div style="font-size:0.78rem;color:var(--gray-500);margin-top:2px;">Ends: <strong>'+formatDate(t.endDate)+'</strong> &nbsp;|&nbsp; '+period+' @ '+formatCurrency(rate)+'</div>'
       +'</div>'
       +'<button class="btn btn-primary btn-sm" onclick="renewNow(\''+t.id+'\')"><i class="fas fa-sync-alt"></i> Renew Now</button>'
@@ -208,7 +208,7 @@ function renderReceivablesList() {
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--gray-100);">'
       +'<div>'
       +'<div style="font-weight:700;color:var(--navy);font-size:0.875rem;">'+t.name+'</div>'
-      +'<div style="font-size:0.78rem;color:var(--gray-400);">'+t.company+' &nbsp;·&nbsp; Space '+t.spaceNumber+'</div>'
+      +'<div style="font-size:0.78rem;color:var(--gray-400);">'+t.company+' &nbsp;·&nbsp; Space '+getTenantSpaceNumbers(t).join(', ')+'</div>'
       +'</div>'
       +'<div style="display:flex;align-items:center;gap:8px;">'
       +'<span class="badge badge-red">'+formatCurrency(r.balance)+' due</span>'
@@ -445,9 +445,13 @@ function getBookingMix(filter) {
   const tenants = getFilteredTenants(filter);
 
   const totalSpaces = lots.reduce(function (s, l) { return s + l.totalSpaces; }, 0);
-  const active = tenants.filter(function (t) { return t.status === 'active'; }).length;
-  const pending = tenants.filter(function (t) { return t.status === 'pending'; }).length;
-  const moveout = tenants.filter(function (t) { return t.status === 'moveout'; }).length;
+  const spaceCount = function (status) {
+    return tenants.filter(function (t) { return t.status === status; })
+      .reduce(function (s, t) { return s + getTenantSpaceNumbers(t).length; }, 0);
+  };
+  const active = spaceCount('active');
+  const pending = spaceCount('pending');
+  const moveout = spaceCount('moveout');
   const vacant = Math.max(0, totalSpaces - active - pending - moveout);
 
   return { totalSpaces, active, pending, moveout, vacant };
@@ -549,7 +553,7 @@ function renderUpcomingReservations(filter) {
     return '<tr>' +
       '<td><strong>' + tenant.name + '</strong></td>' +
       '<td>' + (lot ? lot.name : '-') + '</td>' +
-      '<td>' + tenant.spaceNumber + '</td>' +
+      '<td>' + getTenantSpaceNumbers(tenant).join(', ') + '</td>' +
       '<td>' + formatDate(r.startDate) + '</td>' +
       '<td>' + formatDate(r.endDate) + '</td>' +
       '<td>' + formatCurrency(r.amount) + '/mo</td>' +

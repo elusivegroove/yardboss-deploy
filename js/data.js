@@ -1143,6 +1143,21 @@ function getLot(id) { return APP_DATA.lots.find(function(l){ return l.id===id; }
 function getLotName(id) { var l=getLot(id); return l?l.name:'—'; }
 function getTenant(id) { return APP_DATA.tenants.find(function(t){ return t.id===id; }); }
 
+// ── Multi-Space Reservations ─────────────────────────────────────────────────
+// Returns all space numbers held by a tenant (primary spaceNumber + any
+// additionalSpaces), in order, with empty/duplicate entries removed.
+function getTenantSpaceNumbers(tenant) {
+  if (!tenant) return [];
+  var spaces = [tenant.spaceNumber].concat(tenant.additionalSpaces || []);
+  var seen = {};
+  return spaces.filter(function(sp) {
+    if (!sp) return false;
+    if (seen[sp]) return false;
+    seen[sp] = true;
+    return true;
+  });
+}
+
 // ── Pricing Plans ────────────────────────────────────────────────────────────
 // Central pricing config lives on each lot (lot.pricingPlans). Editing it in
 // Settings propagates everywhere a plan dropdown is shown (staff check-in,
@@ -1274,6 +1289,89 @@ function renewTenantLease(tenantId) {
   var today = new Date().toISOString().split('T')[0];
   t.payments.unshift({ date: today, amount: rate, status: 'paid', method: t.paymentMethod === 'autopay' ? 'autopay' : 'manual' });
   return t;
+}
+
+// ── Parking Expiration / Renewal Notifications ────────────────────────────────
+// Notice window before a tenant's due date, based on their rental cadence:
+//   daily   → 24 hours (1 day) before
+//   weekly  → 3 days before
+//   monthly → 5 days before
+function getNoticeDays(rateType) {
+  switch (rateType) {
+    case 'daily':  return 1;
+    case 'weekly': return 3;
+    case 'monthly':
+    default:       return 5;
+  }
+}
+
+// Days remaining until a tenant's due date (negative = past due). Returns null
+// if the tenant has no due date set.
+function getDaysUntilDue(tenant) {
+  if (!tenant || !tenant.dueDate) return null;
+  var today = new Date();
+  today.setHours(0,0,0,0);
+  var due = new Date(tenant.dueDate + 'T00:00:00');
+  return Math.round((due - today) / 86400000);
+}
+
+// Renewal status for a tenant: 'moved_out', 'scheduled_move_out', 'past_due',
+// 'due_soon' (within their rate-type's notice window), or 'current'.
+function computeRenewalStatus(tenant) {
+  if (!tenant) return 'current';
+  if (tenant.status === 'past') return 'moved_out';
+  if (tenant.moveOutDate) {
+    var today = new Date(); today.setHours(0,0,0,0);
+    var moveOut = new Date(tenant.moveOutDate + 'T00:00:00');
+    return moveOut <= today ? 'moved_out' : 'scheduled_move_out';
+  }
+  var daysRemaining = getDaysUntilDue(tenant);
+  if (daysRemaining === null) return 'current';
+  if (daysRemaining < 0) return 'past_due';
+  if (daysRemaining <= getNoticeDays(tenant.rateType)) return 'due_soon';
+  return 'current';
+}
+
+// Advance a tenant's due date by one rental period (based on rateType),
+// records a renewal entry on the ledger, and persists via the API.
+function extendTenantDueDate(tenantId) {
+  var t = getTenant(tenantId);
+  if (!t || !t.dueDate) return null;
+  var due = new Date(t.dueDate + 'T00:00:00');
+  var newDue = new Date(due);
+  switch (t.rateType) {
+    case 'daily':  newDue.setDate(due.getDate() + 1); break;
+    case 'weekly': newDue.setDate(due.getDate() + 7); break;
+    case 'monthly':
+    default:       newDue.setMonth(due.getMonth() + 1); break;
+  }
+  var oldDue = t.dueDate;
+  t.dueDate = newDue.toISOString().split('T')[0];
+  t.renewalStatus = 'current';
+  var rate = t.renewalRate || t.monthlyRate;
+  var today = new Date().toISOString().split('T')[0];
+  t.payments.unshift({ date: today, amount: rate, type: 'payment', status: 'paid', method: t.paymentMethod === 'autopay' ? 'autopay' : 'manual', note: 'Renewal: extended from ' + oldDue + ' to ' + t.dueDate });
+  if (typeof YB !== 'undefined' && YB.saveTenant) {
+    YB.saveTenant({ id: tenantId, dueDate: t.dueDate, renewalStatus: t.renewalStatus, payments: t.payments }).catch(function(){});
+  }
+  return t;
+}
+
+// Returns all active tenants whose renewal status is 'due_soon' or 'past_due',
+// each annotated with daysRemaining, for the Parking Expiration report and daily digest.
+function getParkingDueList() {
+  return APP_DATA.tenants
+    .filter(function(t) { return t.status === 'active'; })
+    .map(function(t) {
+      return {
+        tenant: t,
+        daysRemaining: getDaysUntilDue(t),
+        renewalStatus: computeRenewalStatus(t),
+        balance: computeTenantBalance(t)
+      };
+    })
+    .filter(function(r) { return r.renewalStatus === 'due_soon' || r.renewalStatus === 'past_due'; })
+    .sort(function(a, b) { return (a.daysRemaining === null ? 999 : a.daysRemaining) - (b.daysRemaining === null ? 999 : b.daysRemaining); });
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────

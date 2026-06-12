@@ -109,7 +109,8 @@
     var balance = computeBalance(tenant);
 
     document.getElementById('payTenantName').textContent = tenant.name;
-    document.getElementById('paySpace').textContent = (tenant.company ? tenant.company + ' — ' : '') + 'Space ' + (tenant.spaceNumber || '—');
+    var spaceNums = (tenant.spaceNumbers && tenant.spaceNumbers.length) ? tenant.spaceNumbers : [tenant.spaceNumber || '—'];
+    document.getElementById('paySpace').textContent = (tenant.company ? tenant.company + ' — ' : '') + 'Space' + (spaceNums.length > 1 ? 's ' : ' ') + spaceNums.join(', ');
 
     if (balance <= 0.005) {
       document.getElementById('payAmount').textContent = '$0.00';

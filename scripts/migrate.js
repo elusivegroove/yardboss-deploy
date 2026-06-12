@@ -105,6 +105,9 @@ async function runMigrations() {
   await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS rate_type TEXT DEFAULT 'monthly'`);
   await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS last_reminder_sent_at TIMESTAMPTZ`);
 
+  // ── Multi-space reservations: additional space numbers beyond the primary one ──
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS additional_spaces JSONB DEFAULT '[]'`);
+
   console.log('[migrate] Tables ready.');
 
   // ── Default pricing plans (Semi Truck + RV) ──────────────────────────────

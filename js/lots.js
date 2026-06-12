@@ -1,10 +1,10 @@
 // YardBoss — lots.js  |  Full Manage Lots functionality
 
 function getOccupiedSpaces(lotId) {
-  return APP_DATA.tenants.filter(function(t){ return t.lotId===lotId && t.status==='active'; }).map(function(t){ return t.spaceNumber; });
+  return APP_DATA.tenants.filter(function(t){ return t.lotId===lotId && t.status==='active'; }).reduce(function(acc,t){ return acc.concat(getTenantSpaceNumbers(t)); }, []);
 }
 function getReservedSpaces(lotId) {
-  return APP_DATA.tenants.filter(function(t){ return t.lotId===lotId && t.status==='pending'; }).map(function(t){ return t.spaceNumber; });
+  return APP_DATA.tenants.filter(function(t){ return t.lotId===lotId && t.status==='pending'; }).reduce(function(acc,t){ return acc.concat(getTenantSpaceNumbers(t)); }, []);
 }
 
 function generateSpaceNumbers(lot) {
@@ -87,7 +87,7 @@ function openSpacesModal(lotId) {
   var grid = document.getElementById('spaceGrid');
   grid.innerHTML = allSpaces.map(function(sp) {
     var cls = occupied.includes(sp)?'occupied':reserved.includes(sp)?'reserved':'vacant';
-    var tenant = APP_DATA.tenants.find(function(t){ return t.spaceNumber===sp && t.lotId===lotId; });
+    var tenant = APP_DATA.tenants.find(function(t){ return t.lotId===lotId && getTenantSpaceNumbers(t).includes(sp); });
     var tip = tenant ? sp+'\n'+tenant.name : sp;
     return '<div class="space-tile '+cls+'" title="'+tip+'">'+sp+'</div>';
   }).join('');
@@ -113,14 +113,14 @@ function openRentRollModal(lotId) {
     var last = t.payments[0];
     var payBadge = last ? ('<span class="badge '+(last.status==='paid'?'badge-green':last.status==='late'?'badge-yellow':'badge-red')+'">'+last.status.charAt(0).toUpperCase()+last.status.slice(1)+'</span>') : '—';
     var stBadge = '<span class="badge '+(t.status==='active'?'badge-green':t.status==='pending'?'badge-yellow':'badge-gray')+'">'+t.status.charAt(0).toUpperCase()+t.status.slice(1)+'</span>';
-    return '<tr><td>'+t.name+'</td><td>'+t.spaceNumber+'</td><td>'+t.vehicle.type+'</td><td>'+formatCurrency(t.monthlyRate)+'</td><td>'+formatDate(t.startDate)+'</td><td>'+formatDate(t.endDate)+'</td><td>'+payBadge+'</td><td>'+stBadge+'</td></tr>';
+    return '<tr><td>'+t.name+'</td><td>'+getTenantSpaceNumbers(t).join(', ')+'</td><td>'+t.vehicle.type+'</td><td>'+formatCurrency(t.monthlyRate)+'</td><td>'+formatDate(t.startDate)+'</td><td>'+formatDate(t.endDate)+'</td><td>'+payBadge+'</td><td>'+stBadge+'</td></tr>';
   }).join('');
 
   document.getElementById('rentRollTable').innerHTML = rows || '<tr><td colspan="8" class="empty-state">No tenants</td></tr>';
   document.getElementById('rentRollExportBtn').onclick = function() {
     exportToCSV(
-      ['Name','Space','Vehicle Type','Rate/Mo','Start','End','Last Payment','Status'],
-      tenants.map(function(t){ var last=t.payments[0]; return [t.name,t.spaceNumber,t.vehicle.type,t.monthlyRate,t.startDate,t.endDate,last?last.status:'',t.status]; }),
+      ['Name','Space(s)','Vehicle Type','Rate/Mo','Start','End','Last Payment','Status'],
+      tenants.map(function(t){ var last=t.payments[0]; return [t.name,getTenantSpaceNumbers(t).join(', '),t.vehicle.type,t.monthlyRate,t.startDate,t.endDate,last?last.status:'',t.status]; }),
       'rent-roll-'+lot.name.replace(/\s+/g,'-').toLowerCase()+'.csv'
     );
   };

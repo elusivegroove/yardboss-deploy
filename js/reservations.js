@@ -131,6 +131,18 @@ function openTenantPanel(tenantId) {
   document.getElementById('panelLot').textContent = lot ? lot.name : '—';
   document.getElementById('panelSpace').textContent = tenant.spaceNumber || '—';
   document.getElementById('panelRate').textContent = formatCurrency(tenant.monthlyRate)+'/mo';
+
+  // Additional Spaces
+  var additionalSpaces = tenant.additionalSpaces || [];
+  document.getElementById('panelAdditionalSpaces').innerHTML = additionalSpaces.length
+    ? additionalSpaces.map(function(sp) {
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">'
+          +'<span style="font-size:0.85rem;font-weight:600;color:var(--navy);">'+sp+'</span>'
+          +'<button class="btn btn-secondary btn-sm btn-icon" title="Remove Space" onclick="removeAdditionalSpace(\''+tenantId+'\',\''+sp+'\')"><i class="fas fa-times"></i></button>'
+          +'</div>';
+      }).join('')
+    : '<p style="color:var(--gray-400);font-size:0.82rem;padding:4px 0;">Only the primary space</p>';
+  document.getElementById('panelAddSpaceBtn').onclick = function(){ openAdditionalSpaceModal(tenantId); };
   document.getElementById('panelStart').textContent = formatDate(tenant.startDate);
   document.getElementById('panelEnd').textContent = formatDate(tenant.endDate);
 
@@ -527,6 +539,62 @@ async function handleLedgerEntrySubmit(e) {
   if (_panelTenantId === tenantId) openTenantPanel(tenantId);
 }
 
+// ── Additional Spaces ─────────────────────────────────────────────────────
+function openAdditionalSpaceModal(tenantId) {
+  var form = document.getElementById('additionalSpaceForm');
+  form.reset();
+  form.dataset.tenantId = tenantId;
+  document.getElementById('additionalSpaceModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('asSpaceNumber').focus(); }, 80);
+}
+
+async function handleAdditionalSpaceSubmit(e) {
+  e.preventDefault();
+  var form = document.getElementById('additionalSpaceForm');
+  var tenantId = form.dataset.tenantId;
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+
+  var spaceNumber = document.getElementById('asSpaceNumber').value.trim();
+  if (!spaceNumber) { showToast('Please enter a space number.', 'error'); return; }
+
+  var existing = getTenantSpaceNumbers(tenant);
+  if (existing.includes(spaceNumber)) { showToast('Tenant already has space '+spaceNumber+'.', 'error'); return; }
+
+  var additionalSpaces = (tenant.additionalSpaces || []).concat([spaceNumber]);
+
+  try {
+    await YB.saveTenant({ id: tenantId, additionalSpaces: additionalSpaces });
+    tenant.additionalSpaces = additionalSpaces;
+    showToast('Space '+spaceNumber+' added for '+tenant.name, 'success');
+  } catch (err) {
+    tenant.additionalSpaces = additionalSpaces;
+    showToast('Space added (offline)', 'warning');
+  }
+
+  document.getElementById('additionalSpaceModal').classList.remove('open');
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+  renderTenantsTable();
+}
+
+async function removeAdditionalSpace(tenantId, spaceNumber) {
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  var additionalSpaces = (tenant.additionalSpaces || []).filter(function(sp){ return sp !== spaceNumber; });
+
+  try {
+    await YB.saveTenant({ id: tenantId, additionalSpaces: additionalSpaces });
+    tenant.additionalSpaces = additionalSpaces;
+    showToast('Space '+spaceNumber+' removed', 'success');
+  } catch (err) {
+    tenant.additionalSpaces = additionalSpaces;
+    showToast('Space removed (offline)', 'warning');
+  }
+
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+  renderTenantsTable();
+}
+
 // ── Additional Drivers ────────────────────────────────────────────────────
 function openAdditionalDriverModal(tenantId) {
   var form = document.getElementById('additionalDriverForm');
@@ -717,8 +785,11 @@ function populatePricingPlanSelect(selectEl, vehicleType, selectedPlanId) {
 }
 
 // Applies the selected plan's price to the rate field and shows a hint, or
-// leaves the rate field as-is for manual entry.
-function applyPricingPlanSelection(planSelectEl, rateEl, hintEl) {
+// leaves the rate field as-is for manual entry. If rateTypeEl is given, the
+// plan's billing cadence (day/week/month) is mirrored into it. If both
+// startDateEl and dueDateEl are given, the due date is set to the start date
+// plus one plan period.
+function applyPricingPlanSelection(planSelectEl, rateEl, hintEl, rateTypeEl, startDateEl, dueDateEl) {
   var planId = planSelectEl.value;
   if (!planId) {
     hintEl.textContent = '';
@@ -728,6 +799,35 @@ function applyPricingPlanSelection(planSelectEl, rateEl, hintEl) {
   if (!plan) return;
   rateEl.value = plan.price;
   hintEl.textContent = plan.label + ' plan — $' + plan.price.toFixed(2) + ' (you can still adjust this manually)';
+  if (rateTypeEl) rateTypeEl.value = unitToRateType(plan.unit);
+  if (startDateEl && dueDateEl) {
+    dueDateEl.value = computeDueDateFromPlan(startDateEl.value, plan);
+  }
+}
+
+// Maps a pricing plan's billing unit to a tenant rate type used for
+// renewal notice windows (daily=1 day, weekly=3 days, monthly=5 days).
+function unitToRateType(unit) {
+  switch (unit) {
+    case 'day':  return 'daily';
+    case 'week': return 'weekly';
+    case 'month':
+    default:     return 'monthly';
+  }
+}
+
+// Computes a due date by adding one plan period (qty * unit) to startDate.
+function computeDueDateFromPlan(startDate, plan) {
+  if (!startDate || !plan) return '';
+  var d = new Date(startDate + 'T00:00:00');
+  var qty = plan.qty || 1;
+  switch (plan.unit) {
+    case 'day':  d.setDate(d.getDate() + qty); break;
+    case 'week': d.setDate(d.getDate() + (qty * 7)); break;
+    case 'month':
+    default:     d.setMonth(d.getMonth() + qty); break;
+  }
+  return d.toISOString().split('T')[0];
 }
 
 // ── Add Tenant Modal ──────────────────────────────────────────────────────
@@ -747,6 +847,7 @@ function openAddTenantModal() {
   lotSel.innerHTML = APP_DATA.lots.map(function(l){ return '<option value="'+l.id+'">'+l.name+'</option>'; }).join('');
   populatePricingPlanSelect(document.getElementById('atPricingPlan'), document.getElementById('atVehicleType').value);
   document.getElementById('atRateHint').textContent = '';
+  document.getElementById('atRateType').value = 'monthly';
   clearInsuranceFields();
   document.getElementById('atAutoRenewFields').style.display = 'none';
   document.getElementById('atAutopayFields').style.display = 'none';
@@ -770,6 +871,8 @@ function openEditTenantModal(tenantId) {
   document.getElementById('atStart').value   = t.startDate || '';
   document.getElementById('atEnd').value     = t.endDate || '';
   document.getElementById('atStatus').value  = t.status || 'active';
+  document.getElementById('atRateType').value = t.rateType || 'monthly';
+  document.getElementById('atDueDate').value = t.dueDate || '';
 
   // Vehicle
   document.getElementById('atVehicleMake').value  = t.vehicle ? (t.vehicle.make || '') : '';
@@ -833,6 +936,8 @@ async function handleAddTenantSubmit(e) {
   var start   = document.getElementById('atStart').value;
   var end     = document.getElementById('atEnd').value;
   var status  = document.getElementById('atStatus').value;
+  var rateType = document.getElementById('atRateType').value;
+  var dueDate  = document.getElementById('atDueDate').value || null;
 
   var vMake   = document.getElementById('atVehicleMake').value.trim();
   var vModel  = document.getElementById('atVehicleModel').value.trim();
@@ -873,8 +978,12 @@ async function handleAddTenantSubmit(e) {
     insurancePolicyNumber:insurancePolicyNumber, insuranceCompany:insuranceCompany,
     insuranceExpDate:insuranceExpDate,
     autoRenew:autoRenew, renewalPeriod:renewalPeriod, renewalRate:renewalRate,
-    paymentMethod:paymentMethod, autopayCard:autopayCard, autopayNextDate:autopayNextDate
+    paymentMethod:paymentMethod, autopayCard:autopayCard, autopayNextDate:autopayNextDate,
+    rateType:rateType, dueDate:dueDate
   };
+  tenantData.renewalStatus = computeRenewalStatus(Object.assign({}, editId ? getTenant(editId) : {}, {
+    dueDate: dueDate, rateType: rateType, status: status
+  }));
   if (editId) tenantData.id = editId;
   if (insuranceDoc) tenantData.insuranceDoc = insuranceDoc;
 
@@ -921,6 +1030,8 @@ function openWalkInModal() {
   document.getElementById('wiStart').value = new Date().toISOString().split('T')[0];
   populatePricingPlanSelect(document.getElementById('wiPricingPlan'), document.getElementById('wiVehicleType').value);
   document.getElementById('wiRateHint').textContent = '';
+  document.getElementById('wiRateType').value = 'monthly';
+  document.getElementById('wiDueDate').value = '';
   document.getElementById('walkInModal').classList.add('open');
   setTimeout(function(){ document.getElementById('wiName').focus(); }, 80);
 }
@@ -935,6 +1046,8 @@ async function handleWalkInSubmit(e) {
   var space      = document.getElementById('wiSpace').value.trim();
   var rate       = parseFloat(document.getElementById('wiRate').value) || 0;
   var start      = document.getElementById('wiStart').value;
+  var rateType   = document.getElementById('wiRateType').value;
+  var dueDate    = document.getElementById('wiDueDate').value || null;
   var vType      = document.getElementById('wiVehicleType').value;
   var plate      = '';
   var plateState = '';
@@ -959,8 +1072,9 @@ async function handleWalkInSubmit(e) {
     vehicle: { make: '', model: '', year: null, plate: plate, type: vType },
     plateState: plateState, truckNumber: null, trailerNumber: null,
     registrationStatus: 'pending', walkIn: true, payments: payments,
-    paymentMethod: 'manual'
+    paymentMethod: 'manual', rateType: rateType, dueDate: dueDate
   };
+  tenantData.renewalStatus = computeRenewalStatus(tenantData);
 
   try {
     var saved = await YB.saveTenant(tenantData);
@@ -987,10 +1101,10 @@ async function handleWalkInSubmit(e) {
 function exportTenants() {
   var list = getFilteredTenants();
   exportToCSV(
-    ['Name','Email','Phone','Company','Lot','Space','Rate/Mo','Start','End','Status','Truck#','Trailer#','Plate','PlateState','InsurancePolicy','InsuranceCompany','InsuranceExp','AutoRenew','PaymentMethod','PriceLocked','MoveOutDate','RejectionReason','Balance'],
+    ['Name','Email','Phone','Company','Lot','Space(s)','Rate/Mo','Start','End','Status','Truck#','Trailer#','Plate','PlateState','InsurancePolicy','InsuranceCompany','InsuranceExp','AutoRenew','PaymentMethod','PriceLocked','MoveOutDate','RejectionReason','Balance'],
     list.map(function(t){ return [
       t.name, t.email, t.phone, t.company, getLotName(t.lotId),
-      t.spaceNumber, t.monthlyRate, t.startDate, t.endDate, t.status,
+      getTenantSpaceNumbers(t).join('; '), t.monthlyRate, t.startDate, t.endDate, t.status,
       t.truckNumber||'', t.trailerNumber||'',
       (t.vehicle?t.vehicle.plate:''), t.plateState||'',
       t.insurancePolicyNumber||'', t.insuranceCompany||'', t.insuranceExpDate||'',
@@ -1074,14 +1188,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('atRateHint').textContent = '';
   });
   document.getElementById('atPricingPlan').addEventListener('change', function() {
-    applyPricingPlanSelection(this, document.getElementById('atRate'), document.getElementById('atRateHint'));
+    applyPricingPlanSelection(this, document.getElementById('atRate'), document.getElementById('atRateHint'),
+      document.getElementById('atRateType'), document.getElementById('atStart'), document.getElementById('atDueDate'));
   });
   document.getElementById('wiVehicleType').addEventListener('change', function() {
     populatePricingPlanSelect(document.getElementById('wiPricingPlan'), this.value);
     document.getElementById('wiRateHint').textContent = '';
   });
   document.getElementById('wiPricingPlan').addEventListener('change', function() {
-    applyPricingPlanSelection(this, document.getElementById('wiRate'), document.getElementById('wiRateHint'));
+    applyPricingPlanSelection(this, document.getElementById('wiRate'), document.getElementById('wiRateHint'),
+      document.getElementById('wiRateType'), document.getElementById('wiStart'), document.getElementById('wiDueDate'));
   });
 
   // Insurance file input
@@ -1113,6 +1229,12 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('cancelAdditionalDriverModal').addEventListener('click', function(){ document.getElementById('additionalDriverModal').classList.remove('open'); });
   document.getElementById('additionalDriverModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
   document.getElementById('additionalDriverForm').addEventListener('submit', handleAdditionalDriverSubmit);
+
+  // Additional Space modal
+  document.getElementById('closeAdditionalSpaceModal').addEventListener('click', function(){ document.getElementById('additionalSpaceModal').classList.remove('open'); });
+  document.getElementById('cancelAdditionalSpaceModal').addEventListener('click', function(){ document.getElementById('additionalSpaceModal').classList.remove('open'); });
+  document.getElementById('additionalSpaceModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+  document.getElementById('additionalSpaceForm').addEventListener('submit', handleAdditionalSpaceSubmit);
 
   // Message modal
   document.getElementById('sendMsgBtn').addEventListener('click', sendMessage);

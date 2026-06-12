@@ -94,7 +94,7 @@
   <div class="panel-section">
     <h4>Lot Assignment</h4>
     <div class="panel-info-row"><span class="label">Lot</span><span class="value" id="panelLot">-</span></div>
-    <div class="panel-info-row"><span class="label">Space #</span><span class="value" id="panelSpace">-</span></div>
+    <div class="panel-info-row"><span class="label">Primary Space #</span><span class="value" id="panelSpace">-</span></div>
     <div class="panel-info-row"><span class="label">Monthly Rate</span><span class="value" id="panelRate">-</span></div>
     <div class="panel-info-row">
       <span class="label">Price Lock</span>
@@ -102,6 +102,23 @@
     </div>
     <div class="panel-info-row"><span class="label">Start Date</span><span class="value" id="panelStart">-</span></div>
     <div class="panel-info-row"><span class="label">End Date</span><span class="value" id="panelEnd">-</span></div>
+  </div>
+
+  <div class="panel-section">
+    <h4>Additional Spaces</h4>
+    <div id="panelAdditionalSpaces"></div>
+    <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:8px;" id="panelAddSpaceBtn"><i class="fas fa-plus"></i> Add Space</button>
+  </div>
+
+  <div class="panel-section">
+    <h4>Parking Renewal</h4>
+    <div class="panel-info-row"><span class="label">Due Date</span><span class="value" id="panelDueDate">-</span></div>
+    <div class="panel-info-row"><span class="label">Renewal Status</span><span class="value" id="panelRenewalStatus">-</span></div>
+    <div class="panel-info-row"><span class="label">Last Reminder Sent</span><span class="value" id="panelLastReminder">-</span></div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-secondary btn-sm" style="flex:1;" id="panelExtendBtn"><i class="fas fa-calendar-plus"></i> Extend Parking</button>
+      <button class="btn btn-secondary btn-sm" style="flex:1;" id="panelSendReminderBtn"><i class="fas fa-bell"></i> Send Reminder</button>
+    </div>
   </div>
 
   <div class="panel-section" id="panelMoveOutSection">
@@ -208,6 +225,19 @@
           <label>Rate ($)</label>
           <input type="number" id="atRate" min="0" step="0.01" placeholder="350">
           <span id="atRateHint" style="display:block;font-size:0.72rem;color:var(--gray-500);margin-top:4px;"></span>
+        </div>
+        <div class="form-group">
+          <label>Rate Type</label>
+          <select id="atRateType">
+            <option value="monthly">Monthly</option>
+            <option value="weekly">Weekly</option>
+            <option value="daily">Daily</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Parking Due Date</label>
+          <input type="date" id="atDueDate">
+          <span style="display:block;font-size:0.72rem;color:var(--gray-500);margin-top:4px;">Reminder sent 1/3/5 days before (daily/weekly/monthly)</span>
         </div>
         <div class="form-group">
           <label>Status</label>
@@ -552,8 +582,20 @@
           <span id="wiRateHint" style="display:block;font-size:0.72rem;color:var(--gray-500);margin-top:4px;"></span>
         </div>
         <div class="form-group">
+          <label>Rate Type</label>
+          <select id="wiRateType">
+            <option value="monthly">Monthly</option>
+            <option value="weekly">Weekly</option>
+            <option value="daily">Daily</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Start Date</label>
           <input type="date" id="wiStart">
+        </div>
+        <div class="form-group">
+          <label>Parking Due Date</label>
+          <input type="date" id="wiDueDate">
         </div>
         <div class="form-group">
           <label>First Payment ($)</label>
@@ -710,6 +752,26 @@
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
         <button type="button" class="btn btn-secondary" id="cancelLedgerEntryModal">Cancel</button>
         <button type="submit" class="btn btn-primary" id="ledgerEntrySubmitBtn"><i class="fas fa-save"></i> Add Charge</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Add Space Modal ──────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="additionalSpaceModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-square-parking" style="margin-right:8px;color:var(--teal);"></i>Add Space</h3>
+      <button class="modal-close" id="closeAdditionalSpaceModal"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="additionalSpaceForm">
+      <div class="form-group">
+        <label>Space Number</label>
+        <input type="text" id="asSpaceNumber" placeholder="R-12 or T-05" required>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn btn-secondary" id="cancelAdditionalSpaceModal">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Add Space</button>
       </div>
     </form>
   </div>

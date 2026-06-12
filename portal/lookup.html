@@ -49,6 +49,7 @@
           <button class="btn-outline" style="color:var(--navy); border-color:var(--gray-300);" onclick="document.getElementById('detailWrapper').style.display='none'">
             <i class="fas fa-arrow-left"></i> Back
           </button>
+          <a href="profile.html" id="profileLinkBtn" class="btn-outline" style="color:var(--navy); border-color:var(--gray-300);"><i class="fas fa-id-card"></i> Update My Profile</a>
           <a href="book.html" class="btn-primary"><i class="fas fa-plus"></i> Book Another Space</a>
         </div>
       </div>
@@ -103,7 +104,7 @@ function renderLookupResults(items, email) {
     items.map(r => `
       <div class="lookup-result-item" onclick="showDetail('${r.id}')">
         <div>
-          <div style="font-weight:600; color:var(--navy); font-size:0.9rem;">${r.lotName} — Space ${r.spaceNumber}</div>
+          <div style="font-weight:600; color:var(--navy); font-size:0.9rem;">${r.lotName} — Space${(r.spaceNumbers&&r.spaceNumbers.length>1)?'s':''} ${(r.spaceNumbers&&r.spaceNumbers.length?r.spaceNumbers:[r.spaceNumber]).join(', ')}</div>
           <div style="font-size:0.78rem; color:var(--gray-500); margin-top:2px;">${r.lotCity} · ${r.spaceType} · $${r.monthlyRate}/mo</div>
           <div style="font-size:0.78rem; color:var(--gray-500);">${formatDate(r.startDate)} → ${formatDate(r.endDate)}</div>
         </div>
@@ -129,6 +130,7 @@ async function showDetail(id) {
   }
 
   document.getElementById('detailWrapper').style.display = 'block';
+  document.getElementById('profileLinkBtn').href = `profile.html?t=${r.id}`;
   document.getElementById('detailContent').innerHTML = `
     <div class="confirm-icon"><i class="fas fa-warehouse"></i></div>
     <h2>${r.lotName || r.lotId}</h2>
@@ -139,7 +141,7 @@ async function showDetail(id) {
     </div>
     <div class="confirm-details">
       <div class="confirm-details-row"><span class="label">Tenant</span><span class="value">${r.tenantName}</span></div>
-      <div class="confirm-details-row"><span class="label">Space #</span><span class="value">${r.spaceNumber}</span></div>
+      <div class="confirm-details-row"><span class="label">Space${(r.spaceNumbers&&r.spaceNumbers.length>1)?'s':''} #</span><span class="value">${(r.spaceNumbers&&r.spaceNumbers.length?r.spaceNumbers:[r.spaceNumber]).join(', ')}</span></div>
       <div class="confirm-details-row"><span class="label">Space Type</span><span class="value">${r.spaceType}</span></div>
       <div class="confirm-details-row"><span class="label">Start Date</span><span class="value">${formatDate(r.startDate)}</span></div>
       <div class="confirm-details-row"><span class="label">End Date</span><span class="value">${formatDate(r.endDate)}</span></div>

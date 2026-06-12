@@ -47,6 +47,12 @@ function rowToTenant(row) {
     moveOutDate:            row.move_out_date ? row.move_out_date.toISOString().split('T')[0] : null,
     rejectionReason:        row.rejection_reason || null,
     additionalDrivers:      row.additional_drivers || [],
+    dueDate:                row.due_date ? row.due_date.toISOString().split('T')[0] : null,
+    renewalStatus:          row.renewal_status || 'current',
+    rateType:               row.rate_type || 'monthly',
+    lastReminderSentAt:     row.last_reminder_sent_at ? row.last_reminder_sent_at.toISOString() : null,
+    additionalSpaces:       row.additional_spaces || [],
+    spaceNumbers:           [row.space_number].concat(row.additional_spaces || []).filter(Boolean),
   };
 }
 
@@ -85,14 +91,16 @@ router.post('/', async (req, res) => {
         truck_number, trailer_number, insurance_doc, insurance_policy_number,
         insurance_company, insurance_exp_date, auto_renew, renewal_period,
         renewal_rate, payment_method, autopay_card, autopay_next_date, payments,
-        price_locked, move_out_date, rejection_reason, additional_drivers
+        price_locked, move_out_date, rejection_reason, additional_drivers,
+        due_date, renewal_status, rate_type, additional_spaces
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,
         $9,$10,$11,$12,$13,$14,
         $15,$16,$17,$18,
         $19,$20,$21,$22,
         $23,$24,$25,$26,$27,
-        $28,$29,$30,$31
+        $28,$29,$30,$31,
+        $32,$33,$34,$35
       ) RETURNING *
     `, [
       id,
@@ -125,7 +133,11 @@ router.post('/', async (req, res) => {
       b.priceLocked || false,
       b.moveOutDate || null,
       b.rejectionReason || null,
-      b.additionalDrivers ? JSON.stringify(b.additionalDrivers) : '[]'
+      b.additionalDrivers ? JSON.stringify(b.additionalDrivers) : '[]',
+      b.dueDate || null,
+      b.renewalStatus || 'current',
+      b.rateType || 'monthly',
+      b.additionalSpaces ? JSON.stringify(b.additionalSpaces) : '[]'
     ]);
     res.status(201).json(rowToTenant(result.rows[0]));
   } catch (err) {
@@ -172,9 +184,14 @@ router.patch('/:id', async (req, res) => {
       moveOutDate:            'move_out_date',
       rejectionReason:        'rejection_reason',
       additionalDrivers:      'additional_drivers',
+      dueDate:                'due_date',
+      renewalStatus:          'renewal_status',
+      rateType:               'rate_type',
+      lastReminderSentAt:     'last_reminder_sent_at',
+      additionalSpaces:       'additional_spaces',
     };
 
-    const jsonFields = new Set(['vehicle', 'insurance_doc', 'payments', 'additional_drivers']);
+    const jsonFields = new Set(['vehicle', 'insurance_doc', 'payments', 'additional_drivers', 'additional_spaces']);
     const setClauses = ['updated_at = NOW()'];
     const values = [];
     let paramIdx = 1;

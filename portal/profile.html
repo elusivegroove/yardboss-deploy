@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete Your Profile — YardBoss</title>
+  <link rel="stylesheet" href="css/portal.css">
+  <link rel="icon" type="image/png" href="/images/yardboss-logo.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script>!function(){var t=localStorage.getItem("yb-theme");t&&"light"!==t&&document.documentElement.setAttribute("data-theme",t)}();</script>
+</head>
+<body>
+<nav class="portal-nav">
+  <a href="index.html" class="nav-logo">
+    <img src="/images/yardboss-logo.png" class="nav-logo-icon" alt="YardBoss">
+    <span class="nav-logo-text">YardBoss</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html#lots" class="nav-link">Locations</a>
+    <a href="lookup.html" class="nav-link">My Reservation</a>
+    <a href="book.html" class="btn-nav"><i class="fas fa-plus"></i> Book Now</a>
+  </div>
+</nav>
+
+<section class="section">
+  <div class="container" style="max-width:720px;">
+
+    <div id="profileLoading" style="text-align:center;padding:60px 0;">
+      <i class="fas fa-spinner fa-spin" style="font-size:1.6rem;color:var(--teal);"></i>
+      <p style="color:var(--gray-500);margin-top:12px;">Loading your profile...</p>
+    </div>
+
+    <div id="profileContent" style="display:none;">
+      <div class="text-center mb-6">
+        <h2 class="section-title">Complete Your Profile</h2>
+        <p class="section-sub">Keep your vehicle, insurance, and driver information up to date.</p>
+      </div>
+
+      <div class="booking-card">
+        <h2 id="profileTenantName">—</h2>
+        <p class="subtitle" id="profileSpace">—</p>
+
+        <form id="profileForm">
+          <div class="form-section">
+            <h3>Vehicle Information</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Make</label>
+                <input type="text" id="vehicleMake" placeholder="Freightliner">
+              </div>
+              <div class="form-group">
+                <label>Model</label>
+                <input type="text" id="vehicleModel" placeholder="Cascadia">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Year</label>
+                <input type="number" id="vehicleYear" placeholder="2022" min="1990" max="2030">
+              </div>
+              <div class="form-group">
+                <label>Vehicle Type</label>
+                <select id="vehicleType">
+                  <option value="Semi Truck">Semi Truck</option>
+                  <option value="Box Truck">Box Truck</option>
+                  <option value="Travel Trailer">Travel Trailer</option>
+                  <option value="Fifth Wheel">Fifth Wheel</option>
+                  <option value="Class A RV">Class A RV</option>
+                  <option value="Class B/C RV">Class B/C RV</option>
+                  <option value="Container">Container</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>License Plate</label>
+                <input type="text" id="vehiclePlate" placeholder="HVY1234">
+              </div>
+              <div class="form-group">
+                <label>Plate State</label>
+                <input type="text" id="plateState" placeholder="TX" maxlength="2" style="text-transform:uppercase;">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Equipment</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Truck #</label>
+                <input type="text" id="truckNumber" placeholder="T-104">
+              </div>
+              <div class="form-group">
+                <label>Trailer #</label>
+                <input type="text" id="trailerNumber" placeholder="TR-552">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Insurance Information</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Policy Number</label>
+                <input type="text" id="insurancePolicyNumber" placeholder="POL-00123456">
+              </div>
+              <div class="form-group">
+                <label>Insurance Company</label>
+                <input type="text" id="insuranceCompany" placeholder="Progressive Commercial">
+              </div>
+            </div>
+            <div class="form-row single">
+              <div class="form-group">
+                <label>Policy Expiration Date</label>
+                <input type="date" id="insuranceExpDate">
+              </div>
+            </div>
+            <div class="form-row single">
+              <div class="form-group">
+                <label>Certificate of Insurance (COI)</label>
+                <input type="file" id="insuranceFile" accept="image/*,application/pdf">
+                <span class="form-hint" id="insuranceFileName">No file selected</span>
+                <div id="insurancePreview" style="margin-top:8px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Additional Drivers</h3>
+            <div id="driversList" style="margin-bottom:14px;"></div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Driver Name</label>
+                <input type="text" id="newDriverName" placeholder="Jane Smith">
+              </div>
+              <div class="form-group">
+                <label>Phone</label>
+                <input type="tel" id="newDriverPhone" placeholder="(713) 555-0100">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>License #</label>
+                <input type="text" id="newDriverLicense" placeholder="DL-1234567">
+              </div>
+              <div class="form-group" style="justify-content:flex-end;">
+                <button type="button" class="btn-back" id="addDriverBtn" style="width:100%;"><i class="fas fa-plus"></i> Add Driver</button>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="profileSaveBtn">
+            <i class="fas fa-save"></i> Save Profile
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div id="profileError" style="display:none;" class="confirm-wrapper">
+      <div class="confirm-card">
+        <div class="confirm-icon" style="background:var(--red-bg, #fee2e2);color:#b91c1c;">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h2>Unable to Load Profile</h2>
+        <p class="confirm-sub" id="profileErrorMsg">This profile link is invalid or has expired. Please contact the office at <strong>(713) 555-0142</strong>.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer class="portal-footer">
+  <div class="footer-logo"><img src="/images/yardboss-logo.png" alt="YardBoss"> YardBoss</div>
+  <p>Need help? Call <a href="tel:+17135550142">(713) 555-0142</a></p>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/portal.js"></script>
+<script src="js/profile.js"></script>
+</body>
+</html>
