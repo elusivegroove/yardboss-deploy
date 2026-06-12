@@ -1,13 +1,12 @@
 // YardBoss — Dev Tracker
-// Backed by the shared /api/dev-items store (Postgres on cloud) so bug/feature
-// submissions from beta users land in the same backlog Toby sees.
-// Falls back to localStorage when no database is configured (local dev).
+// Backed by the shared /api/dev-items store so bug/feature submissions from
+// beta users land in the same backlog Toby sees. localStorage is kept as a
+// personal backup/cache and synced into the shared store on every load.
 
 (function () {
   'use strict';
 
   var STORAGE_KEY = 'yardboss_dev_items';
-  var MIGRATION_FLAG = 'yardboss_dev_items_migrated_to_api';
   var API_BASE = '/api/dev-items';
 
   // ── Type / Status / Priority style maps ──────────────────────────────────
@@ -41,7 +40,6 @@
   var activeStatusFilter = 'all';
   var searchQuery        = '';
   var editingId          = null;
-  var useApi             = false;
   var allItems           = [];
 
   // ── Storage adapters ─────────────────────────────────────────────────────
@@ -59,19 +57,12 @@
     return Promise.resolve(items);
   }
 
-  function localCreate(item) {
+  function localUpsert(item) {
     return localList().then(function (items) {
-      items.push(item);
-      return localSaveAll(items).then(function () { return item; });
-    });
-  }
-
-  function localUpdate(id, patch) {
-    return localList().then(function (items) {
-      var item = items.find(function (i) { return i.id === id; });
-      if (!item) return null;
-      Object.assign(item, patch);
-      return localSaveAll(items).then(function () { return item; });
+      var idx = items.findIndex(function (i) { return i.id === item.id; });
+      if (idx > -1) items[idx] = Object.assign({}, items[idx], item);
+      else items.push(item);
+      return localSaveAll(items);
     });
   }
 
@@ -105,28 +96,51 @@
     return fetch(API_BASE + '/' + encodeURIComponent(id), { method: 'DELETE' });
   }
 
-  function listItems()        { return useApi ? apiList()        : localList(); }
-  function createItem(item)   { return useApi ? apiCreate(item)  : localCreate(item); }
-  function updateItem(id, p)  { return useApi ? apiUpdate(id, p)  : localUpdate(id, p); }
-  function removeItem(id)     { return useApi ? apiRemove(id)     : localRemove(id); }
-
   function generateId() {
     return 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
   }
 
-  // One-time migration of any items already in this browser's localStorage
-  // into the shared API store (only relevant where a database is connected).
-  function migrateLocalToApi() {
-    if (localStorage.getItem(MIGRATION_FLAG)) return Promise.resolve();
-    return localList().then(function (items) {
-      if (!items.length) {
-        localStorage.setItem(MIGRATION_FLAG, '1');
-        return;
-      }
-      return Promise.all(items.map(function (item) { return apiCreate(item); }))
-        .then(function () { localStorage.setItem(MIGRATION_FLAG, '1'); })
-        .catch(function (err) { console.error('[dev] migration to API failed:', err); });
+  // ── Sync ──────────────────────────────────────────────────────────────────
+  // The shared /api/dev-items store is the source of truth (in-memory on
+  // Railway when no DATABASE_URL, so it's shared by everyone hitting that
+  // backend — beta users and Toby). localStorage is kept as a personal
+  // backup/cache: every load re-pushes any local items missing from the
+  // shared store (handles first-time migration and recovery after a
+  // backend restart), and every create/update/delete dual-writes locally.
+
+  function listItems() {
+    return localList().then(function (localItems) {
+      return apiList().then(function (apiItems) {
+        var apiIds = {};
+        apiItems.forEach(function (i) { apiIds[i.id] = true; });
+        var missing = localItems.filter(function (i) { return !apiIds[i.id]; });
+        if (!missing.length) return apiItems;
+        return Promise.all(missing.map(function (i) {
+          return apiCreate(i).catch(function () { return i; });
+        })).then(function (created) { return apiItems.concat(created); });
+      }).catch(function () {
+        return localItems;
+      });
     });
+  }
+
+  function createItem(item) {
+    return apiCreate(item).catch(function () { return item; })
+      .then(function (created) { return localUpsert(created).then(function () { return created; }); });
+  }
+
+  function updateItem(id, patch) {
+    return apiUpdate(id, patch).catch(function () {
+      var merged = Object.assign({ id: id }, patch);
+      return localList().then(function (items) {
+        var existing = items.find(function (i) { return i.id === id; });
+        return Object.assign({}, existing, merged);
+      });
+    }).then(function (updated) { return localUpsert(updated).then(function () { return updated; }); });
+  }
+
+  function removeItem(id) {
+    return apiRemove(id).catch(function () {}).then(function () { return localRemove(id); });
   }
 
   // ── Filtering ─────────────────────────────────────────────────────────────
@@ -453,11 +467,7 @@
   // ── DOMContentLoaded ──────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', function () {
-    fetch('/api/env').then(function (r) { return r.json(); })
-      .then(function (env) { useApi = !!env.hasDatabase; })
-      .catch(function () { useApi = false; })
-      .then(function () { return useApi ? migrateLocalToApi() : Promise.resolve(); })
-      .then(refresh);
+    refresh();
 
     // New item button
     document.getElementById('newItemBtn').addEventListener('click', openNewModal);
