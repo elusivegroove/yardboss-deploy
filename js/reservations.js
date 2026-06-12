@@ -867,6 +867,7 @@ function openEditTenantModal(tenantId) {
   document.getElementById('atPhone').value   = t.phone || '';
   document.getElementById('atCompany').value = t.company || '';
   document.getElementById('atSpace').value   = t.spaceNumber || '';
+  document.getElementById('atAdditionalSpaces').value = (t.additionalSpaces || []).join(', ');
   document.getElementById('atRate').value    = t.monthlyRate || '';
   document.getElementById('atStart').value   = t.startDate || '';
   document.getElementById('atEnd').value     = t.endDate || '';
@@ -932,6 +933,9 @@ async function handleAddTenantSubmit(e) {
   var company = document.getElementById('atCompany').value.trim();
   var lotId   = document.getElementById('atLotId').value;
   var space   = document.getElementById('atSpace').value.trim();
+  var additionalSpaces = document.getElementById('atAdditionalSpaces').value.split(',')
+    .map(function(s){ return s.trim(); })
+    .filter(function(s, i, arr){ return s && s !== space && arr.indexOf(s) === i; });
   var rate    = parseFloat(document.getElementById('atRate').value) || 0;
   var start   = document.getElementById('atStart').value;
   var end     = document.getElementById('atEnd').value;
@@ -971,7 +975,7 @@ async function handleAddTenantSubmit(e) {
 
   var tenantData = {
     name:name, email:email, phone:phone, company:company, initials:initials,
-    lotId:lotId, spaceNumber:space, monthlyRate:rate,
+    lotId:lotId, spaceNumber:space, additionalSpaces:additionalSpaces, monthlyRate:rate,
     startDate:start, endDate:end, status:status,
     vehicle:{ make:vMake, model:vModel, year:vYear, plate:vPlate, type:vType },
     plateState:plateState, truckNumber:truckNumber, trailerNumber:trailerNumber,
@@ -1044,6 +1048,9 @@ async function handleWalkInSubmit(e) {
   var company    = document.getElementById('wiCompany').value.trim();
   var lotId      = document.getElementById('wiLotId').value;
   var space      = document.getElementById('wiSpace').value.trim();
+  var additionalSpaces = document.getElementById('wiAdditionalSpaces').value.split(',')
+    .map(function(s){ return s.trim(); })
+    .filter(function(s, i, arr){ return s && s !== space && arr.indexOf(s) === i; });
   var rate       = parseFloat(document.getElementById('wiRate').value) || 0;
   var start      = document.getElementById('wiStart').value;
   var rateType   = document.getElementById('wiRateType').value;
@@ -1067,7 +1074,7 @@ async function handleWalkInSubmit(e) {
 
   var tenantData = {
     name: name, email: email, phone: phone, company: company, initials: initials,
-    lotId: lotId, spaceNumber: space, monthlyRate: rate,
+    lotId: lotId, spaceNumber: space, additionalSpaces: additionalSpaces, monthlyRate: rate,
     startDate: start, endDate: '', status: 'active',
     vehicle: { make: '', model: '', year: null, plate: plate, type: vType },
     plateState: plateState, truckNumber: null, trailerNumber: null,
