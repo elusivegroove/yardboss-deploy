@@ -55,15 +55,15 @@ function buildEmailHtml(senderName, body) {
   body{font-family:Inter,Arial,sans-serif;background:#f8fafc;margin:0;padding:0;}
   .wrap{max-width:580px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,0.07);}
   .hdr{background:#0f1e3c;padding:24px 32px;}
-  .hdr .logo{font-size:1.2rem;font-weight:800;color:#fff;letter-spacing:-0.5px;}
-  .hdr .logo span{color:#00b4a0;}
+  .hdr .logo{margin-bottom:6px;}
+  .hdr .logo img{height:38px;border-radius:6px;display:block;}
   .hdr .sub{font-size:0.75rem;color:rgba(255,255,255,0.55);margin-top:3px;}
   .body{padding:28px 32px;font-size:0.92rem;color:#334155;line-height:1.65;}
   .footer{padding:16px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:0.75rem;color:#94a3b8;text-align:center;}
 </style></head><body>
 <div class="wrap">
   <div class="hdr">
-    <div class="logo">Yard<span>Boss</span></div>
+    <div class="logo"><img src="https://yardboss-deploy.vercel.app/images/yardboss-logo.png" alt="YardBoss"></div>
     <div class="sub">TransVega RV and Truck Center &nbsp;·&nbsp; 7406 HWY 27 North, Sebring FL 33870</div>
   </div>
   <div class="body">${escaped}</div>

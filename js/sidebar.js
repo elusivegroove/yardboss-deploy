@@ -4,7 +4,7 @@ const NAV_HTML = `
 <nav class="top-nav" id="topNav">
   <button class="nav-hamburger" id="navHamburger"><i class="fas fa-bars"></i></button>
   <a href="/index.html" class="nav-logo">
-    <div class="nav-logo-mark"><i class="fas fa-truck"></i></div>
+    <img src="/images/yardboss-logo.png" class="nav-logo-mark" alt="YardBoss">
     <span class="nav-logo-name">YardBoss</span>
     <span class="nav-logo-env" id="envBadge">sandbox</span>
   </a>

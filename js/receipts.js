@@ -58,8 +58,8 @@ var YardBossReceipts = (function() {
       'body{font-family:Inter,Arial,sans-serif;color:#1e293b;margin:0;padding:0;background:#f8fafc;}' +
       '.receipt{max-width:600px;margin:32px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);}' +
       '.receipt-header{background:#0f1e3c;color:#fff;padding:28px 32px;}' +
-      '.receipt-header .logo{font-size:1.3rem;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px;}' +
-      '.receipt-header .logo span{color:#00b4a0;}' +
+      '.receipt-header .logo{margin-bottom:8px;}' +
+      '.receipt-header .logo img{height:42px;border-radius:6px;display:block;}' +
       '.receipt-header .sub{font-size:0.78rem;color:rgba(255,255,255,0.6);margin-top:2px;}' +
       '.receipt-meta{display:flex;justify-content:space-between;padding:18px 32px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:0.82rem;}' +
       '.receipt-meta .label{color:#64748b;margin-bottom:2px;}' +
@@ -81,7 +81,7 @@ var YardBossReceipts = (function() {
       '</style></head><body>' +
       '<div class="receipt">' +
       '<div class="receipt-header">' +
-      '<div class="logo">Yard<span>Boss</span></div>' +
+      '<div class="logo"><img src="https://yardboss-deploy.vercel.app/images/yardboss-logo.png" alt="YardBoss"></div>' +
       '<div class="sub">' + OWNER.business + ' &nbsp;|&nbsp; ' + OWNER.address + ', ' + OWNER.city + '</div>' +
       '<div class="sub">' + OWNER.phone + ' &nbsp;|&nbsp; ' + OWNER.email + '</div>' +
       '</div>' +
