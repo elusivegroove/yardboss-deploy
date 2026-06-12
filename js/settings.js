@@ -17,6 +17,16 @@ function prefillProfile() {
   if (ownerAddressEl) ownerAddressEl.value = owner.address || '';
 }
 
+function prefillPricing() {
+  var plans = getPricingPlans('lot-1');
+  document.querySelectorAll('#pricingForm input[data-plan-id]').forEach(function(input) {
+    var category = input.dataset.category;
+    var planId = input.dataset.planId;
+    var plan = (plans[category] || []).find(function(p){ return p.id === planId; });
+    input.value = plan ? plan.price : '';
+  });
+}
+
 function showSavedMessage(elementId, message, duration) {
   const el = document.getElementById(elementId);
   if (!el) return;
@@ -30,6 +40,7 @@ function showSavedMessage(elementId, message, duration) {
 
 document.addEventListener('DOMContentLoaded', function () {
   prefillProfile();
+  prefillPricing();
 
   // ── Theme cards ────────────────────────────────────────────
   var currentTheme = window.YBTheme ? window.YBTheme.get() : (localStorage.getItem('yb-theme') || 'light');
@@ -53,6 +64,37 @@ document.addEventListener('DOMContentLoaded', function () {
       APP_DATA.owner.phone = document.getElementById('ownerPhone').value;
       APP_DATA.owner.address = document.getElementById('ownerAddress').value;
       showSavedMessage('profileSavedMsg', 'Changes saved!', 2500);
+    });
+  }
+
+  const pricingForm = document.getElementById('pricingForm');
+  if (pricingForm) {
+    pricingForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var lot = getLot('lot-1');
+      var pricingPlans = {};
+      document.querySelectorAll('#pricingForm input[data-plan-id]').forEach(function(input) {
+        var category = input.dataset.category;
+        var price = parseFloat(input.value) || 0;
+        if (!pricingPlans[category]) pricingPlans[category] = [];
+        pricingPlans[category].push({
+          id: input.dataset.planId,
+          label: input.dataset.planLabel,
+          price: price,
+          unit: input.dataset.planUnit,
+          qty: parseInt(input.dataset.planQty, 10)
+        });
+      });
+
+      lot.pricingPlans = pricingPlans;
+
+      if (window.YB && typeof YB.savePricingPlans === 'function') {
+        YB.savePricingPlans('lot-1', pricingPlans).catch(function (err) {
+          console.error('Could not save pricing plans:', err);
+        });
+      }
+
+      showSavedMessage('pricingSavedMsg', 'Pricing saved!', 2500);
     });
   }
 

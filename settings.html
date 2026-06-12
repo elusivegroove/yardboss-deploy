@@ -92,6 +92,61 @@
       </form>
     </div>
 
+    <!-- Pricing Plans -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <h3 style="margin-bottom:2px;">Pricing Plans</h3>
+          <p style="font-size:0.8rem;color:var(--gray-500)">Set standard rates for Semi Trucks and RVs. Changes apply everywhere pricing is selected — staff check-in and the client self-check-in portal.</p>
+        </div>
+        <i class="fas fa-tags" style="font-size:1.2rem;color:var(--teal)"></i>
+      </div>
+      <form id="pricingForm">
+        <div style="margin-bottom:18px;">
+          <h4 style="font-size:0.85rem;font-weight:700;color:var(--navy);margin-bottom:10px;"><i class="fas fa-truck" style="color:var(--teal);margin-right:6px;"></i>Semi Trucks</h4>
+          <div class="settings-grid">
+            <div class="form-group">
+              <label>Daily Rate ($)</label>
+              <input type="number" min="0" step="0.01" id="price-semi-daily" data-category="Semi Truck" data-plan-id="semi-daily" data-plan-label="Daily" data-plan-unit="day" data-plan-qty="1">
+            </div>
+            <div class="form-group">
+              <label>Weekly Rate ($)</label>
+              <input type="number" min="0" step="0.01" id="price-semi-weekly" data-category="Semi Truck" data-plan-id="semi-weekly" data-plan-label="Weekly" data-plan-unit="week" data-plan-qty="1">
+            </div>
+            <div class="form-group">
+              <label>Monthly Rate ($)</label>
+              <input type="number" min="0" step="0.01" id="price-semi-monthly" data-category="Semi Truck" data-plan-id="semi-monthly" data-plan-label="Monthly" data-plan-unit="month" data-plan-qty="1">
+            </div>
+          </div>
+        </div>
+        <div>
+          <h4 style="font-size:0.85rem;font-weight:700;color:var(--navy);margin-bottom:10px;"><i class="fas fa-caravan" style="color:var(--teal);margin-right:6px;"></i>RVs</h4>
+          <div class="settings-grid">
+            <div class="form-group">
+              <label>1 Month Rate ($)</label>
+              <input type="number" min="0" step="0.01" id="price-rv-1mo" data-category="RV" data-plan-id="rv-1mo" data-plan-label="1 Month" data-plan-unit="month" data-plan-qty="1">
+            </div>
+            <div class="form-group">
+              <label>3 Months Rate ($)</label>
+              <input type="number" min="0" step="0.01" id="price-rv-3mo" data-category="RV" data-plan-id="rv-3mo" data-plan-label="3 Months" data-plan-unit="month" data-plan-qty="3">
+            </div>
+            <div class="form-group">
+              <label>6 Months Rate ($)</label>
+              <input type="number" min="0" step="0.01" id="price-rv-6mo" data-category="RV" data-plan-id="rv-6mo" data-plan-label="6 Months" data-plan-unit="month" data-plan-qty="6">
+            </div>
+            <div class="form-group">
+              <label>1 Year Rate ($)</label>
+              <input type="number" min="0" step="0.01" id="price-rv-1yr" data-category="RV" data-plan-id="rv-1yr" data-plan-label="1 Year" data-plan-unit="month" data-plan-qty="12">
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:16px;">
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Pricing</button>
+          <span id="pricingSavedMsg" style="display:none"></span>
+        </div>
+      </form>
+    </div>
+
     <!-- Notification Preferences -->
     <div class="card">
       <div class="card-header-row">

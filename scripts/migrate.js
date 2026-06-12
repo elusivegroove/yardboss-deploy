@@ -20,9 +20,13 @@ async function runMigrations() {
       amenities      JSONB,
       space_types    JSONB,
       monthly_rates  JSONB,
+      pricing_plans  JSONB,
       image          TEXT
     )
   `);
+
+  // ── Lot columns (idempotent for pre-existing tables) ─────────────────────
+  await db.query(`ALTER TABLE lots ADD COLUMN IF NOT EXISTS pricing_plans JSONB`);
 
   // ── Create tenants table ──────────────────────────────────────────────────
   await db.query(`
@@ -71,10 +75,25 @@ async function runMigrations() {
 
   console.log('[migrate] Tables ready.');
 
+  // ── Default pricing plans (Semi Truck + RV) ──────────────────────────────
+  const defaultPricingPlans = {
+    'Semi Truck': [
+      { id: 'semi-daily',   label: 'Daily',   price: 30.00,  unit: 'day',   qty: 1 },
+      { id: 'semi-weekly',  label: 'Weekly',  price: 95.00,  unit: 'week',  qty: 1 },
+      { id: 'semi-monthly', label: 'Monthly', price: 180.00, unit: 'month', qty: 1 }
+    ],
+    'RV': [
+      { id: 'rv-1mo', label: '1 Month',  price: 100.00, unit: 'month', qty: 1 },
+      { id: 'rv-3mo', label: '3 Months', price: 275.00, unit: 'month', qty: 3 },
+      { id: 'rv-6mo', label: '6 Months', price: 550.00, unit: 'month', qty: 6 },
+      { id: 'rv-1yr', label: '1 Year',   price: 985.00, unit: 'month', qty: 12 }
+    ]
+  };
+
   // ── Seed lot ──────────────────────────────────────────────────────────────
   await db.query(`
-    INSERT INTO lots (id, name, address, city, state, zip, total_spaces, status, amenities, space_types, monthly_rates, image)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    INSERT INTO lots (id, name, address, city, state, zip, total_spaces, status, amenities, space_types, monthly_rates, pricing_plans, image)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     ON CONFLICT (id) DO NOTHING
   `, [
     'lot-1',
@@ -86,8 +105,12 @@ async function runMigrations() {
     JSON.stringify(['24/7 Gated Access','Security Cameras','Full Hookups (30/50 Amp)','Water & Sewer','WiFi Available','Dump Station','Truck Wash Bay','On-Site Manager','Paved Surfaces','Lighting']),
     JSON.stringify(['Class A RV','Class B/C RV','Travel Trailer','Fifth Wheel','Semi-Truck','Box Truck']),
     JSON.stringify({'Class A RV':220,'Class B/C RV':175,'Travel Trailer':165,'Fifth Wheel':190,'Semi-Truck':295,'Box Truck':225}),
+    JSON.stringify(defaultPricingPlans),
     null
   ]);
+
+  // Backfill pricing_plans for rows that existed before this column/feature was added.
+  await db.query(`UPDATE lots SET pricing_plans = $1 WHERE pricing_plans IS NULL`, [JSON.stringify(defaultPricingPlans)]);
 
   // ── Seed tenants ──────────────────────────────────────────────────────────
   const tenants = [

@@ -22,6 +22,7 @@ router.get('/lots', (req, res) => {
         amenities: l.amenities,
         spaceTypes: l.spaceTypes,
         monthlyRates: l.monthlyRates,
+        pricingPlans: l.pricingPlans || {},
         image: l.image,
         lowestRate: Math.min(...Object.values(l.monthlyRates)),
       };
@@ -48,6 +49,7 @@ router.get('/lots/:id', (req, res) => {
     amenities: lot.amenities,
     spaceTypes: lot.spaceTypes,
     monthlyRates: lot.monthlyRates,
+    pricingPlans: lot.pricingPlans || {},
     image: lot.image,
   });
 });

@@ -28,6 +28,19 @@ const APP_DATA = {
         'Class A RV': 220,'Class B/C RV': 175,'Travel Trailer': 165,
         'Fifth Wheel': 190,'Semi-Truck': 295,'Box Truck': 225
       },
+      pricingPlans: {
+        'Semi Truck': [
+          { id: 'semi-daily',   label: 'Daily',   price: 30.00,  unit: 'day',   qty: 1 },
+          { id: 'semi-weekly',  label: 'Weekly',  price: 95.00,  unit: 'week',  qty: 1 },
+          { id: 'semi-monthly', label: 'Monthly', price: 180.00, unit: 'month', qty: 1 }
+        ],
+        'RV': [
+          { id: 'rv-1mo', label: '1 Month',  price: 100.00, unit: 'month', qty: 1 },
+          { id: 'rv-3mo', label: '3 Months', price: 275.00, unit: 'month', qty: 3 },
+          { id: 'rv-6mo', label: '6 Months', price: 550.00, unit: 'month', qty: 6 },
+          { id: 'rv-1yr', label: '1 Year',   price: 985.00, unit: 'month', qty: 12 }
+        ]
+      },
       image: null
     }
   ],
@@ -1129,6 +1142,46 @@ const APP_DATA = {
 function getLot(id) { return APP_DATA.lots.find(function(l){ return l.id===id; }); }
 function getLotName(id) { var l=getLot(id); return l?l.name:'—'; }
 function getTenant(id) { return APP_DATA.tenants.find(function(t){ return t.id===id; }); }
+
+// ── Pricing Plans ────────────────────────────────────────────────────────────
+// Central pricing config lives on each lot (lot.pricingPlans). Editing it in
+// Settings propagates everywhere a plan dropdown is shown (staff check-in,
+// portal self-check-in) since they all read from this same source.
+function getPricingPlans(lotId) {
+  var lot = getLot(lotId || 'lot-1');
+  return (lot && lot.pricingPlans) || {};
+}
+
+// Maps a vehicle/space type label to a pricing category ('Semi Truck' or 'RV'),
+// or null if no plan category applies (e.g. "Other" — manual entry only).
+function getPricingCategoryForType(typeName) {
+  if (!typeName) return null;
+  var t = String(typeName).toLowerCase();
+  if (t.indexOf('semi') !== -1 || t.indexOf('box truck') !== -1) return 'Semi Truck';
+  if (t.indexOf('rv') !== -1 || t.indexOf('trailer') !== -1 || t.indexOf('wheel') !== -1 ||
+      t.indexOf('class a') !== -1 || t.indexOf('class b') !== -1 || t.indexOf('class c') !== -1) return 'RV';
+  return null;
+}
+
+// Returns the list of pricing plan options for a given vehicle/space type, or [] if none apply.
+function getPricingOptionsForType(typeName, lotId) {
+  var category = getPricingCategoryForType(typeName);
+  if (!category) return [];
+  var plans = getPricingPlans(lotId);
+  return plans[category] || [];
+}
+
+// Finds a specific plan by id across all categories for a lot.
+function findPricingPlanById(planId, lotId) {
+  var plans = getPricingPlans(lotId);
+  var found = null;
+  Object.keys(plans).forEach(function(category) {
+    (plans[category] || []).forEach(function(plan) {
+      if (plan.id === planId) found = plan;
+    });
+  });
+  return found;
+}
 
 // ── Billing / Customer Ledger ──────────────────────────────────────────────
 // tenant.payments[] entries are ledger lines: type 'charge' (amount owed) or

@@ -22,6 +22,7 @@ function rowToLot(row) {
     amenities:    row.amenities   || [],
     spaceTypes:   row.space_types || [],
     monthlyRates: row.monthly_rates || {},
+    pricingPlans: row.pricing_plans || {},
     image:        row.image || null,
   };
 }
@@ -161,9 +162,37 @@ router.get('/:id/availability', async (req, res) => {
       spaces,
       spaceTypes: lot.spaceTypes,
       monthlyRates: lot.monthlyRates,
+      pricingPlans: lot.pricingPlans || {},
     });
   } catch (err) {
     console.error('[lots] GET /:id/availability error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/lots/:id/pricing — update centralized pricing plans (Settings → Pricing Plans)
+router.patch('/:id/pricing', async (req, res) => {
+  try {
+    const { pricingPlans } = req.body;
+    if (!pricingPlans || typeof pricingPlans !== 'object') {
+      return res.status(400).json({ error: 'pricingPlans object is required' });
+    }
+
+    if (process.env.DATABASE_URL) {
+      const r = await db.query(
+        'UPDATE lots SET pricing_plans = $1 WHERE id = $2 RETURNING *',
+        [JSON.stringify(pricingPlans), req.params.id]
+      );
+      if (!r.rows.length) return res.status(404).json({ error: 'Lot not found' });
+      return res.json(rowToLot(r.rows[0]));
+    } else {
+      const lot = storeLots.find(function(l){ return l.id === req.params.id; });
+      if (!lot) return res.status(404).json({ error: 'Lot not found' });
+      lot.pricingPlans = pricingPlans;
+      return res.json(lot);
+    }
+  } catch (err) {
+    console.error('[lots] PATCH /:id/pricing error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

@@ -14,6 +14,19 @@ const lots = [
     amenities: ['24/7 Gated Access', 'Security Cameras', 'Full Hookups (30/50 Amp)', 'Water & Sewer', 'WiFi Available', 'Dump Station', 'Truck Wash Bay', 'Restrooms', 'Laundry', 'On-Site Manager', 'Paved Surfaces', 'Lighting'],
     spaceTypes: ['RV Space', 'Semi Truck', 'Box Truck', 'Fifth Wheel'],
     monthlyRates: { 'RV Space': 350, 'Semi Truck': 425, 'Box Truck': 375, 'Fifth Wheel': 325 },
+    pricingPlans: {
+      'Semi Truck': [
+        { id: 'semi-daily',   label: 'Daily',   price: 30.00,  unit: 'day',   qty: 1 },
+        { id: 'semi-weekly',  label: 'Weekly',  price: 95.00,  unit: 'week',  qty: 1 },
+        { id: 'semi-monthly', label: 'Monthly', price: 180.00, unit: 'month', qty: 1 }
+      ],
+      'RV': [
+        { id: 'rv-1mo', label: '1 Month',  price: 100.00, unit: 'month', qty: 1 },
+        { id: 'rv-3mo', label: '3 Months', price: 275.00, unit: 'month', qty: 3 },
+        { id: 'rv-6mo', label: '6 Months', price: 550.00, unit: 'month', qty: 6 },
+        { id: 'rv-1yr', label: '1 Year',   price: 985.00, unit: 'month', qty: 12 }
+      ]
+    },
     image: 'https://placehold.co/600x300/0f1e3c/00b4a0?text=TransVega+RV+%26+Truck+Center',
   },
 ];

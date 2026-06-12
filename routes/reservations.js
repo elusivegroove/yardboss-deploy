@@ -23,7 +23,7 @@ router.post('/', (req, res) => {
   const {
     lotId, spaceType, tenantName, email, phone, company,
     vehicleMake, vehicleModel, vehicleYear, vehiclePlate,
-    startDate, monthlyRate,
+    startDate, endDate, monthlyRate, pricingPlan,
   } = req.body;
 
   if (!lotId || !tenantName || !email) {
@@ -58,8 +58,13 @@ router.post('/', (req, res) => {
   }
 
   const start = new Date(startDate || Date.now());
-  const end = new Date(start);
-  end.setFullYear(end.getFullYear() + 1);
+  let end;
+  if (endDate) {
+    end = new Date(endDate);
+  } else {
+    end = new Date(start);
+    end.setFullYear(end.getFullYear() + 1);
+  }
 
   const rate = monthlyRate || (lot.monthlyRates[spaceType] || 250);
 
@@ -79,6 +84,7 @@ router.post('/', (req, res) => {
     startDate: start.toISOString().split('T')[0],
     endDate: end.toISOString().split('T')[0],
     monthlyRate: rate,
+    pricingPlan: pricingPlan || null,
     status: 'pending',
     paymentStatus: 'unpaid',
     stripeCustomerId: null,

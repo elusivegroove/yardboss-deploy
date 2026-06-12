@@ -7,10 +7,59 @@ let selectedRate = 0;
 
 const state = {
   lotId: null, lotName: '', spaceType: null, rate: 0,
+  planId: null, planLabel: '', unit: 'month', qty: 1,
   startDate: null, endDate: null,
   tenantName: '', company: '', email: '', phone: '',
   vehicleMake: '', vehicleModel: '', vehicleYear: '', vehiclePlate: '',
 };
+
+// ── Pricing plan helpers ─────────────────────────────────────────────────
+// Maps a space type to a centralized pricing category ('Semi Truck' or 'RV').
+// Mirrors the categorization used on the staff side (js/data.js).
+function getPricingCategory(typeName) {
+  if (!typeName) return null;
+  const t = typeName.toLowerCase();
+  if (t.indexOf('semi') !== -1 || t.indexOf('box truck') !== -1) return 'Semi Truck';
+  if (t.indexOf('rv') !== -1 || t.indexOf('trailer') !== -1 || t.indexOf('wheel') !== -1 ||
+      t.indexOf('class a') !== -1 || t.indexOf('class b') !== -1 || t.indexOf('class c') !== -1) return 'RV';
+  return null;
+}
+
+function termLabel(unit, qty) {
+  if (unit === 'day') return qty + (qty === 1 ? ' day' : ' days');
+  if (unit === 'week') return qty + (qty === 1 ? ' week' : ' weeks');
+  return qty + (qty === 1 ? ' month' : ' months');
+}
+
+function rateUnitSuffix(unit) {
+  if (unit === 'day') return '/day';
+  if (unit === 'week') return '/week';
+  return '/month';
+}
+
+// Populates the Pricing Plan dropdown from the lot's centralized pricing
+// plans (set in Settings → Pricing Plans), plus a "Custom Amount" fallback
+// so there is always a way to enter a price manually.
+function populatePricingPlans(spaceType) {
+  const category = getPricingCategory(spaceType);
+  const plans = (category && selectedLot.pricingPlans && selectedLot.pricingPlans[category]) || [];
+  const sel = document.getElementById('pricingPlanSelect');
+  let html = '';
+  plans.forEach(plan => {
+    html += `<option value="${plan.id}">${plan.label} — $${plan.price.toFixed(2)}${rateUnitSuffix(plan.unit)}</option>`;
+  });
+  html += '<option value="custom">Custom Amount...</option>';
+  sel.innerHTML = html;
+  document.getElementById('pricingPlanSection').style.display = 'block';
+
+  if (plans.length) {
+    sel.value = plans[0].id;
+  } else {
+    sel.value = 'custom';
+    document.getElementById('customAmount').value = (selectedLot.monthlyRates && selectedLot.monthlyRates[spaceType]) || '';
+  }
+  sel.dispatchEvent(new Event('change'));
+}
 
 // ── Init ─────────────────────────────────────────────────────────────────
 (async function init() {
@@ -111,9 +160,46 @@ function selectSpaceType(type, rate) {
   const el = document.getElementById(`type_${key}`);
   if (el) el.classList.add('selected');
 
+  populatePricingPlans(type);
+
   document.getElementById('nextStep1').style.display = 'block';
   updateSummary();
 }
+
+// ── Pricing plan select change ───────────────────────────────────────────
+document.getElementById('pricingPlanSelect').addEventListener('change', function() {
+  const planId = this.value;
+  const customRow = document.getElementById('customAmountRow');
+
+  if (planId === 'custom') {
+    customRow.classList.remove('hidden');
+    state.planId = 'custom';
+    state.planLabel = 'Custom';
+    state.unit = 'month';
+    state.qty = 1;
+    state.rate = parseFloat(document.getElementById('customAmount').value) || 0;
+  } else {
+    customRow.classList.add('hidden');
+    const category = getPricingCategory(state.spaceType);
+    const plans = (category && selectedLot.pricingPlans && selectedLot.pricingPlans[category]) || [];
+    const plan = plans.find(p => p.id === planId);
+    if (plan) {
+      state.planId = plan.id;
+      state.planLabel = plan.label;
+      state.unit = plan.unit;
+      state.qty = plan.qty;
+      state.rate = plan.price;
+    }
+  }
+
+  updateEndDate(document.getElementById('startDate').value);
+  updateSummary();
+});
+
+document.getElementById('customAmount').addEventListener('input', function() {
+  state.rate = parseFloat(this.value) || 0;
+  updateSummary();
+});
 
 // ── Date handling ─────────────────────────────────────────────────────────
 document.getElementById('startDate').addEventListener('change', function() {
@@ -125,17 +211,29 @@ document.getElementById('startDate').addEventListener('change', function() {
 function updateEndDate(startStr) {
   if (!startStr) return;
   const end = new Date(startStr);
-  end.setFullYear(end.getFullYear() + 1);
+  const unit = state.unit || 'month';
+  const qty = state.qty || 1;
+  if (unit === 'day') end.setDate(end.getDate() + qty);
+  else if (unit === 'week') end.setDate(end.getDate() + (qty * 7));
+  else end.setMonth(end.getMonth() + qty);
   end.setDate(end.getDate() - 1);
   document.getElementById('endDate').value = end.toISOString().split('T')[0];
   state.endDate = end.toISOString().split('T')[0];
+
+  const hint = document.getElementById('termHint');
+  if (hint) {
+    hint.textContent = state.planId
+      ? `Lease term: ${termLabel(unit, qty)}`
+      : 'Select a pricing plan above to set the term';
+  }
 }
 
 // ── Summary update ────────────────────────────────────────────────────────
 function updateSummary() {
   document.getElementById('sumType').textContent = state.spaceType || '—';
-  document.getElementById('sumRate').textContent = state.rate ? `$${state.rate}/month` : '—';
-  document.getElementById('sumDue').textContent = state.rate ? `$${state.rate}` : '—';
+  document.getElementById('sumRate').textContent = state.rate ? `$${state.rate.toFixed(2)}${rateUnitSuffix(state.unit)}` : '—';
+  document.getElementById('sumDue').textContent = state.rate ? `$${state.rate.toFixed(2)}` : '—';
+  document.getElementById('sumTerm').textContent = state.planId ? termLabel(state.unit || 'month', state.qty || 1) : '—';
   if (state.startDate) {
     document.getElementById('sumStart').textContent = new Date(state.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
@@ -175,6 +273,8 @@ function validateStep(step) {
   if (step === 1) {
     if (!state.lotId) { showToast('Please select a yard location.', 'error'); return false; }
     if (!state.spaceType) { showToast('Please select a space type.', 'error'); return false; }
+    if (!state.planId) { showToast('Please select a pricing plan.', 'error'); return false; }
+    if (state.planId === 'custom' && !(state.rate > 0)) { showToast('Please enter a custom amount.', 'error'); return false; }
     if (!document.getElementById('startDate').value) { showToast('Please select a start date.', 'error'); return false; }
     return true;
   }
@@ -228,7 +328,8 @@ async function proceedToPayment() {
       <div><span style="color:var(--gray-500);">Vehicle:</span> <strong>${state.vehicleYear} ${state.vehicleMake} ${state.vehicleModel}</strong></div>
       <div><span style="color:var(--gray-500);">Plate:</span> <strong>${state.vehiclePlate}</strong></div>
       <div><span style="color:var(--gray-500);">Start Date:</span> <strong>${formatDate(state.startDate)}</strong></div>
-      <div><span style="color:var(--gray-500);">Monthly Rate:</span> <strong style="color:var(--teal);">$${state.rate}/month</strong></div>
+      <div><span style="color:var(--gray-500);">Plan:</span> <strong>${state.planLabel} (${termLabel(state.unit, state.qty)})</strong></div>
+      <div><span style="color:var(--gray-500);">Rate:</span> <strong style="color:var(--teal);">$${state.rate.toFixed(2)}${rateUnitSuffix(state.unit)}</strong></div>
     </div>
   `;
 
@@ -238,15 +339,15 @@ async function proceedToPayment() {
     const env = await envRes.json();
     if (!env.stripeConnected || env.mockPayments) {
       document.getElementById('mockNotice').style.display = 'flex';
-      document.getElementById('payBtnText').textContent = `Pay $${state.rate} (Mock)`;
+      document.getElementById('payBtnText').textContent = `Pay $${state.rate.toFixed(2)} (Mock)`;
     } else {
       document.getElementById('mockNotice').style.display = 'none';
-      document.getElementById('payBtnText').textContent = `Pay $${state.rate} Securely`;
+      document.getElementById('payBtnText').textContent = `Pay $${state.rate.toFixed(2)} Securely`;
       // Initialize Stripe Elements here if real keys present
       // initStripeElements(env.stripePublishableKey);
     }
   } catch(e) {
-    document.getElementById('payBtnText').textContent = `Pay $${state.rate}`;
+    document.getElementById('payBtnText').textContent = `Pay $${state.rate.toFixed(2)}`;
   }
 
   goToStep(4);
@@ -272,7 +373,9 @@ async function submitPayment() {
       vehicleYear: state.vehicleYear,
       vehiclePlate: state.vehiclePlate,
       startDate: state.startDate,
+      endDate: state.endDate,
       monthlyRate: state.rate,
+      pricingPlan: state.planLabel,
     };
     const resRes = await fetch('/api/reservations', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(resBody)
@@ -306,7 +409,7 @@ async function submitPayment() {
   } catch(e) {
     showToast(`Error: ${e.message}`, 'error');
     btn.disabled = false;
-    btn.innerHTML = `<i class="fas fa-lock"></i> <span id="payBtnText">Pay $${state.rate}</span>`;
+    btn.innerHTML = `<i class="fas fa-lock"></i> <span id="payBtnText">Pay $${state.rate.toFixed(2)}</span>`;
   }
 }
 

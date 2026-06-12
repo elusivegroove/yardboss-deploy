@@ -74,6 +74,18 @@
       return fetch(BASE + '/api/lots').then(handleResponse);
     },
 
+    /**
+     * savePricingPlans(lotId, pricingPlans)
+     * Persists the centralized pricing plan config for a lot.
+     */
+    savePricingPlans: function (lotId, pricingPlans) {
+      return fetch(BASE + '/api/lots/' + encodeURIComponent(lotId) + '/pricing', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pricingPlans: pricingPlans })
+      }).then(handleResponse);
+    },
+
   };
 
   window.YB = YB;

@@ -702,6 +702,34 @@ function scanInsurance() {
   });
 }
 
+// ── Pricing Plan dropdowns ────────────────────────────────────────────────
+// Populates a "Pricing Plan" select with the centralized plans (js/data.js
+// APP_DATA.lots[0].pricingPlans) that match the given vehicle type. Always
+// includes a "Manual Entry" option so staff can override/enter a custom rate.
+function populatePricingPlanSelect(selectEl, vehicleType, selectedPlanId) {
+  var options = getPricingOptionsForType(vehicleType);
+  var html = '<option value="">— Manual Entry —</option>';
+  options.forEach(function(plan) {
+    html += '<option value="'+plan.id+'">'+plan.label+' ($'+plan.price.toFixed(2)+')</option>';
+  });
+  selectEl.innerHTML = html;
+  selectEl.value = (selectedPlanId && options.some(function(p){ return p.id===selectedPlanId; })) ? selectedPlanId : '';
+}
+
+// Applies the selected plan's price to the rate field and shows a hint, or
+// leaves the rate field as-is for manual entry.
+function applyPricingPlanSelection(planSelectEl, rateEl, hintEl) {
+  var planId = planSelectEl.value;
+  if (!planId) {
+    hintEl.textContent = '';
+    return;
+  }
+  var plan = findPricingPlanById(planId);
+  if (!plan) return;
+  rateEl.value = plan.price;
+  hintEl.textContent = plan.label + ' plan — $' + plan.price.toFixed(2) + ' (you can still adjust this manually)';
+}
+
 // ── Add Tenant Modal ──────────────────────────────────────────────────────
 function clearInsuranceFields() {
   _pendingInsuranceDoc = null;
@@ -717,6 +745,8 @@ function openAddTenantModal() {
   document.getElementById('addTenantModalTitle').textContent = 'Add New Tenant';
   var lotSel = document.getElementById('atLotId');
   lotSel.innerHTML = APP_DATA.lots.map(function(l){ return '<option value="'+l.id+'">'+l.name+'</option>'; }).join('');
+  populatePricingPlanSelect(document.getElementById('atPricingPlan'), document.getElementById('atVehicleType').value);
+  document.getElementById('atRateHint').textContent = '';
   clearInsuranceFields();
   document.getElementById('atAutoRenewFields').style.display = 'none';
   document.getElementById('atAutopayFields').style.display = 'none';
@@ -748,6 +778,8 @@ function openEditTenantModal(tenantId) {
   document.getElementById('atVehiclePlate').value = t.vehicle ? (t.vehicle.plate || '') : '';
   document.getElementById('atVehicleType').value  = t.vehicle ? (t.vehicle.type || 'Semi Truck') : 'Semi Truck';
   document.getElementById('atPlateState').value   = t.plateState || '';
+  populatePricingPlanSelect(document.getElementById('atPricingPlan'), document.getElementById('atVehicleType').value);
+  document.getElementById('atRateHint').textContent = '';
 
   // Equipment
   document.getElementById('atTruckNumber').value   = t.truckNumber || '';
@@ -887,6 +919,8 @@ function openWalkInModal() {
   var lotSel = document.getElementById('wiLotId');
   lotSel.innerHTML = APP_DATA.lots.map(function(l){ return '<option value="'+l.id+'">'+l.name+'</option>'; }).join('');
   document.getElementById('wiStart').value = new Date().toISOString().split('T')[0];
+  populatePricingPlanSelect(document.getElementById('wiPricingPlan'), document.getElementById('wiVehicleType').value);
+  document.getElementById('wiRateHint').textContent = '';
   document.getElementById('walkInModal').classList.add('open');
   setTimeout(function(){ document.getElementById('wiName').focus(); }, 80);
 }
@@ -1032,6 +1066,22 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Payment method toggle
   document.getElementById('atPaymentMethod').addEventListener('change', function() {
     document.getElementById('atAutopayFields').style.display = this.value === 'autopay' ? 'block' : 'none';
+  });
+
+  // Pricing plan dropdowns — repopulate when vehicle type changes, apply price when plan chosen
+  document.getElementById('atVehicleType').addEventListener('change', function() {
+    populatePricingPlanSelect(document.getElementById('atPricingPlan'), this.value);
+    document.getElementById('atRateHint').textContent = '';
+  });
+  document.getElementById('atPricingPlan').addEventListener('change', function() {
+    applyPricingPlanSelection(this, document.getElementById('atRate'), document.getElementById('atRateHint'));
+  });
+  document.getElementById('wiVehicleType').addEventListener('change', function() {
+    populatePricingPlanSelect(document.getElementById('wiPricingPlan'), this.value);
+    document.getElementById('wiRateHint').textContent = '';
+  });
+  document.getElementById('wiPricingPlan').addEventListener('change', function() {
+    applyPricingPlanSelection(this, document.getElementById('wiRate'), document.getElementById('wiRateHint'));
   });
 
   // Insurance file input

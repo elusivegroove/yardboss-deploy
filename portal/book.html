@@ -85,13 +85,30 @@
               <div class="space-type-grid" id="spaceTypeGrid"></div>
             </div>
 
+            <div class="form-section" id="pricingPlanSection" style="display:none">
+              <h3>Select Pricing Plan</h3>
+              <div class="form-row single">
+                <div class="form-group">
+                  <label>Plan *</label>
+                  <select id="pricingPlanSelect"></select>
+                </div>
+              </div>
+              <div class="form-row single hidden" id="customAmountRow">
+                <div class="form-group">
+                  <label>Custom Amount ($) *</label>
+                  <input type="number" id="customAmount" min="0" step="0.01" placeholder="0.00">
+                  <span class="form-hint">Enter the amount agreed with the yard manager</span>
+                </div>
+              </div>
+            </div>
+
             <div class="form-section" id="dateSection" style="display:none">
               <h3>Move-In Date</h3>
               <div class="form-row">
                 <div class="form-group">
                   <label>Start Date *</label>
                   <input type="date" id="startDate" required>
-                  <span class="form-hint">Lease runs for 12 months from this date</span>
+                  <span class="form-hint" id="termHint">Select a pricing plan above to set the term</span>
                 </div>
                 <div class="form-group">
                   <label>End Date</label>
@@ -239,10 +256,10 @@
             </div>
             <div class="summary-row">
               <span class="summary-label">Lease Term</span>
-              <span class="summary-value">12 months</span>
+              <span class="summary-value" id="sumTerm">—</span>
             </div>
             <div class="summary-row">
-              <span class="summary-label">Monthly Rate</span>
+              <span class="summary-label">Rate</span>
               <span class="summary-value" id="sumRate">—</span>
             </div>
           </div>
@@ -252,7 +269,7 @@
               <span class="summary-total-value" id="sumDue">—</span>
             </div>
           </div>
-          <p class="summary-note">First month's rent due now. Subsequent months billed on the same date each month. Cancel anytime with 30 days' notice.</p>
+          <p class="summary-note">Full amount due now for the selected plan term. Renew or switch plans anytime at the yard office.</p>
         </div>
       </div>
 
