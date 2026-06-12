@@ -1128,6 +1128,24 @@ const APP_DATA = {
     }
     ],
 
+  revenue: {
+    months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    'lot-1': [22400,23800,25100,26400,28200,30100,31400,30800,29100,27600,26200,28900]
+  },
+
+  avgRates: {
+    months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    'lot-1': [218,221,225,229,234,239,242,239,233,228,224,230]
+  },
+
+  occupancy: {
+    months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    'lot-1': {
+      moveIns:  [6,5,7,8,9,11,10,8,7,6,5,7],
+      moveOuts: [3,3,4,4,5, 6, 7,5,4,4,3,4]
+    }
+  },
+
   upcomingReservations: [
     { tenantId: 't-013', lotId: 'lot-1', space: 'T-67', startDate: '2025-01-15', endDate: '2026-01-14', amount: 295, status: 'pending'  },
     { tenantId: 't-014', lotId: 'lot-1', space: 'R-62', startDate: '2025-02-01', endDate: '2026-01-31', amount: 165, status: 'pending'  },
