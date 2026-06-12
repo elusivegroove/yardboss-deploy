@@ -2,6 +2,34 @@
 
 const API = ''; // relative to current origin (served by Express)
 
+// ── Branding (Settings → Branding) ──────────────────────────────────────────
+// Applies a custom logo and/or primary color across the portal, if set.
+function shadeColor(hex, percent) {
+  hex = (hex || '').replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const num = parseInt(hex, 16);
+  if (isNaN(num)) return hex;
+  let r = (num >> 16) & 0xff, g = (num >> 8) & 0xff, b = num & 0xff;
+  r = Math.max(0, Math.min(255, Math.round(r * (1 + percent / 100))));
+  g = Math.max(0, Math.min(255, Math.round(g * (1 + percent / 100))));
+  b = Math.max(0, Math.min(255, Math.round(b * (1 + percent / 100))));
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+function applyBranding() {
+  fetch('/api/branding').then(r => r.json()).then(b => {
+    if (b.primaryColor) {
+      const style = document.createElement('style');
+      style.textContent = `:root{--teal:${b.primaryColor};--teal-dark:${shadeColor(b.primaryColor, -12)};}`;
+      document.head.appendChild(style);
+    }
+    if (b.logoUrl) {
+      document.querySelectorAll('img[src*="yardboss-logo"]').forEach(img => { img.src = b.logoUrl; });
+    }
+  }).catch(() => {});
+}
+applyBranding();
+
 // ── Toast notification ─────────────────────────────────────────────────────
 function showToast(msg, type = 'success') {
   const el = document.getElementById('toast');

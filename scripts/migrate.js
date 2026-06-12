@@ -23,6 +23,15 @@ async function runMigrations() {
     )
   `);
 
+  // ── Create branding table (Settings → Branding — logo + primary color) ────
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS branding (
+      id            INT PRIMARY KEY DEFAULT 1,
+      logo_url      TEXT,
+      primary_color TEXT
+    )
+  `);
+
   // ── Create lots table ─────────────────────────────────────────────────────
   await db.query(`
     CREATE TABLE IF NOT EXISTS lots (

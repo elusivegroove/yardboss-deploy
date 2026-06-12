@@ -86,6 +86,19 @@
       }).then(handleResponse);
     },
 
+    // ── Branding ───────────────────────────────────────────────────────────
+    loadBranding: function () {
+      return fetch(BASE + '/api/branding').then(handleResponse);
+    },
+
+    saveBranding: function (branding) {
+      return fetch(BASE + '/api/branding', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(branding)
+      }).then(handleResponse);
+    },
+
   };
 
   window.YB = YB;

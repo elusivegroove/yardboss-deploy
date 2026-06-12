@@ -68,4 +68,10 @@ function genDevItemId() {
   return 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
 }
 
-module.exports = { lots, reservations, genResId, devItems, genDevItemId };
+// In-memory Branding settings — used when DATABASE_URL is not set (local dev)
+const branding = {
+  logoUrl: null,
+  primaryColor: null,
+};
+
+module.exports = { lots, reservations, genResId, devItems, genDevItemId, branding };

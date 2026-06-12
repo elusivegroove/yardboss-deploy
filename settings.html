@@ -53,6 +53,42 @@
       </div>
     </div>
 
+    <!-- Branding -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <h3 style="margin-bottom:2px;">Branding</h3>
+          <p style="font-size:0.8rem;color:var(--gray-500)">Upload your logo and set a primary color — applied across the dashboard and client portal</p>
+        </div>
+        <i class="fas fa-paint-brush" style="font-size:1.2rem;color:var(--teal)"></i>
+      </div>
+      <form id="brandingForm">
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>Logo</label>
+            <div style="display:flex;align-items:center;gap:14px;">
+              <img id="brandingLogoPreview" src="/images/yardboss-logo.png" alt="Logo preview" style="width:48px;height:48px;object-fit:contain;border-radius:8px;border:1px solid var(--gray-200);background:var(--gray-50);padding:4px;">
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <input type="file" id="brandingLogoInput" accept="image/*" style="font-size:0.8rem;">
+                <button type="button" class="btn-secondary" id="brandingLogoReset" style="font-size:0.75rem;padding:4px 10px;align-self:flex-start;">Reset to Default</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Primary Color</label>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="color" id="brandingColorInput" value="#00b4a0" style="width:48px;height:38px;padding:2px;border-radius:8px;cursor:pointer;">
+              <button type="button" class="btn-secondary" id="brandingColorReset" style="font-size:0.75rem;padding:4px 10px;">Reset to Default</button>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:16px;">
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Branding</button>
+          <span id="brandingSavedMsg" style="display:none"></span>
+        </div>
+      </form>
+    </div>
+
     <!-- Business Profile -->
     <div class="card">
       <div class="card-header-row">

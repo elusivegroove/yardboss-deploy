@@ -2,6 +2,25 @@ const express = require('express');
 const router = express.Router();
 const { lots, reservations } = require('./store');
 
+// Lowest advertised rate for a lot, normalized to a monthly-equivalent price.
+// Considers both the legacy per-space-type monthlyRates and the centralized
+// Pricing Plans (Settings → Pricing Plans), since plans can undercut the
+// monthlyRates (e.g. a $30/day or $100/1-month plan vs a $350/mo flat rate).
+function lowestMonthlyRate(lot) {
+  const rates = Object.values(lot.monthlyRates || {}).slice();
+  Object.values(lot.pricingPlans || {}).forEach(plans => {
+    (plans || []).forEach(p => {
+      const qty = p.qty || 1;
+      let monthly;
+      if (p.unit === 'day') monthly = (p.price * 30) / qty;
+      else if (p.unit === 'week') monthly = (p.price * 30) / (7 * qty);
+      else monthly = p.price / qty;
+      rates.push(monthly);
+    });
+  });
+  return rates.length ? Math.round(Math.min(...rates)) : 0;
+}
+
 // GET /api/portal/lots — public lot listing for client portal
 router.get('/lots', (req, res) => {
   const publicLots = lots
@@ -24,7 +43,7 @@ router.get('/lots', (req, res) => {
         monthlyRates: l.monthlyRates,
         pricingPlans: l.pricingPlans || {},
         image: l.image,
-        lowestRate: Math.min(...Object.values(l.monthlyRates)),
+        lowestRate: lowestMonthlyRate(l),
       };
     });
   res.json(publicLots);

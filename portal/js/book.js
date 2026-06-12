@@ -37,6 +37,19 @@ function rateUnitSuffix(unit) {
   return '/month';
 }
 
+// Shows the actual lowest selectable price for a space type's pricing
+// category (matching what the Pricing Plan dropdown will offer), falling
+// back to the flat monthlyRate only when no plans exist for that category.
+function displayRateLabel(type, monthlyRate) {
+  const category = getPricingCategory(type);
+  const plans = (category && selectedLot.pricingPlans && selectedLot.pricingPlans[category]) || [];
+  if (plans.length) {
+    const lowest = plans.reduce((min, p) => p.price < min.price ? p : min, plans[0]);
+    return `From $${lowest.price.toFixed(2)}${rateUnitSuffix(lowest.unit)}`;
+  }
+  return `$${monthlyRate}/mo`;
+}
+
 // Populates the Pricing Plan dropdown from the lot's centralized pricing
 // plans (set in Settings → Pricing Plans), plus a "Custom Amount" fallback
 // so there is always a way to enter a price manually.
@@ -130,7 +143,7 @@ document.getElementById('lotSelect').addEventListener('change', function() {
     <div class="space-type-option" onclick="selectSpaceType('${type}', ${rate})" id="type_${type.replace(/[^a-z]/gi,'_')}">
       <div class="type-icon">${icons[type] || '🅿️'}</div>
       <div class="type-name">${type}</div>
-      <div class="type-rate">$${rate}/mo</div>
+      <div class="type-rate">${displayRateLabel(type, rate)}</div>
     </div>
   `).join('');
 

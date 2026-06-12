@@ -1,5 +1,33 @@
 // YardBoss — Top Navigation Injector + Theme Manager
 
+// ── Branding (Settings → Branding) ──────────────────────────────────────────
+// Applies a custom logo and/or primary color across the dashboard, if set.
+function shadeColor(hex, percent) {
+  hex = (hex || '').replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(function(c) { return c + c; }).join('');
+  var num = parseInt(hex, 16);
+  if (isNaN(num)) return hex;
+  var r = (num >> 16) & 0xff, g = (num >> 8) & 0xff, b = num & 0xff;
+  r = Math.max(0, Math.min(255, Math.round(r * (1 + percent / 100))));
+  g = Math.max(0, Math.min(255, Math.round(g * (1 + percent / 100))));
+  b = Math.max(0, Math.min(255, Math.round(b * (1 + percent / 100))));
+  return '#' + [r, g, b].map(function(v) { return v.toString(16).padStart(2, '0'); }).join('');
+}
+
+function applyBranding() {
+  fetch('/api/branding').then(function(r) { return r.json(); }).then(function(b) {
+    if (b.primaryColor) {
+      var style = document.createElement('style');
+      style.textContent = ':root{--teal:' + b.primaryColor + ';--teal-dark:' + shadeColor(b.primaryColor, -12) + ';}';
+      document.head.appendChild(style);
+    }
+    if (b.logoUrl) {
+      document.querySelectorAll('img[src*="yardboss-logo"]').forEach(function(img) { img.src = b.logoUrl; });
+    }
+  }).catch(function() {});
+}
+applyBranding();
+
 const NAV_HTML = `
 <nav class="top-nav" id="topNav">
   <button class="nav-hamburger" id="navHamburger"><i class="fas fa-bars"></i></button>

@@ -54,6 +54,7 @@ const sendReceiptRouter = require('./routes/send-receipt');
 const broadcastRouter = require('./routes/broadcast');
 const webhooksRouter = require('./routes/webhooks');
 const devItemsRouter = require('./routes/dev-items');
+const brandingRouter = require('./routes/branding');
 
 app.use('/api/payments', paymentsRouter);
 app.use('/api/reservations', reservationsRouter);
@@ -65,6 +66,7 @@ app.use('/api/send-receipt', sendReceiptRouter);
 app.use('/api/broadcast', broadcastRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/dev-items', devItemsRouter);
+app.use('/api/branding', brandingRouter);
 // Required env vars: ANTHROPIC_API_KEY, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE
 // SMS env vars: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
 

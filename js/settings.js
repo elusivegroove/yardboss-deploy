@@ -38,9 +38,80 @@ function showSavedMessage(elementId, message, duration) {
   }, duration || 2000);
 }
 
+var DEFAULT_LOGO = '/images/yardboss-logo.png';
+var DEFAULT_COLOR = '#00b4a0';
+var brandingLogoUrl = null;
+
+function prefillBranding() {
+  if (!window.YB || typeof YB.loadBranding !== 'function') return;
+  YB.loadBranding().then(function (b) {
+    brandingLogoUrl = b.logoUrl || null;
+    var preview = document.getElementById('brandingLogoPreview');
+    var colorInput = document.getElementById('brandingColorInput');
+    if (preview) preview.src = brandingLogoUrl || DEFAULT_LOGO;
+    if (colorInput) colorInput.value = b.primaryColor || DEFAULT_COLOR;
+  }).catch(function () {});
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   prefillProfile();
   prefillPricing();
+  prefillBranding();
+
+  // ── Branding ───────────────────────────────────────────────
+  var logoInput = document.getElementById('brandingLogoInput');
+  if (logoInput) {
+    logoInput.addEventListener('change', function () {
+      var file = this.files && this.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        brandingLogoUrl = e.target.result;
+        var preview = document.getElementById('brandingLogoPreview');
+        if (preview) preview.src = brandingLogoUrl;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  var logoResetBtn = document.getElementById('brandingLogoReset');
+  if (logoResetBtn) {
+    logoResetBtn.addEventListener('click', function () {
+      brandingLogoUrl = null;
+      var preview = document.getElementById('brandingLogoPreview');
+      if (preview) preview.src = DEFAULT_LOGO;
+      if (logoInput) logoInput.value = '';
+    });
+  }
+
+  var colorResetBtn = document.getElementById('brandingColorReset');
+  if (colorResetBtn) {
+    colorResetBtn.addEventListener('click', function () {
+      var colorInput = document.getElementById('brandingColorInput');
+      if (colorInput) colorInput.value = DEFAULT_COLOR;
+    });
+  }
+
+  var brandingForm = document.getElementById('brandingForm');
+  if (brandingForm) {
+    brandingForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var colorInput = document.getElementById('brandingColorInput');
+      var primaryColor = colorInput ? colorInput.value : DEFAULT_COLOR;
+      var payload = {
+        logoUrl: brandingLogoUrl,
+        primaryColor: (primaryColor === DEFAULT_COLOR) ? null : primaryColor
+      };
+      if (window.YB && typeof YB.saveBranding === 'function') {
+        YB.saveBranding(payload).then(function () {
+          showSavedMessage('brandingSavedMsg', 'Branding saved! Reload to see it everywhere.', 3500);
+        }).catch(function (err) {
+          console.error('Could not save branding:', err);
+          showSavedMessage('brandingSavedMsg', 'Could not save branding.', 3500);
+        });
+      }
+    });
+  }
 
   // ── Theme cards ────────────────────────────────────────────
   var currentTheme = window.YBTheme ? window.YBTheme.get() : (localStorage.getItem('yb-theme') || 'light');
