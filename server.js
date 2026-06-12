@@ -118,12 +118,16 @@ if (process.env.DATABASE_URL) {
 // ─── Scheduled jobs ─────────────────────────────────────────────────────────────
 // Daily Parking Due Report — 8:00 AM America/New_York, every day.
 if (process.env.DATABASE_URL) {
-  const cron = require('node-cron');
-  const { runDailyDueReport } = require('./scripts/daily-due-report');
-  cron.schedule('0 8 * * *', () => {
-    runDailyDueReport().catch(err => console.error('[daily-due-report] Error:', err));
-  }, { timezone: 'America/New_York' });
-  console.log('[Schedule] Daily Parking Due Report — 8:00 AM America/New_York');
+  try {
+    const cron = require('node-cron');
+    const { runDailyDueReport } = require('./scripts/daily-due-report');
+    cron.schedule('0 8 * * *', () => {
+      runDailyDueReport().catch(err => console.error('[daily-due-report] Error:', err));
+    }, { timezone: 'America/New_York' });
+    console.log('[Schedule] Daily Parking Due Report — 8:00 AM America/New_York');
+  } catch (err) {
+    console.error('[Schedule] Daily Parking Due Report not scheduled:', err.message);
+  }
 }
 
 // ─── Start ────────────────────────────────────────────────────────────────────
