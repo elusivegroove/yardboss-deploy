@@ -61,4 +61,11 @@ function genResId() {
   return `res-${String(nextResId++).padStart(3, '0')}`;
 }
 
-module.exports = { lots, reservations, genResId };
+// In-memory Dev Tracker items — used when DATABASE_URL is not set (local dev)
+const devItems = [];
+
+function genDevItemId() {
+  return 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+}
+
+module.exports = { lots, reservations, genResId, devItems, genDevItemId };

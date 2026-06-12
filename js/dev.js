@@ -1,10 +1,14 @@
 // YardBoss — Dev Tracker
-// Stores feature requests, bugs, and improvements in localStorage so they persist across sessions.
+// Backed by the shared /api/dev-items store (Postgres on cloud) so bug/feature
+// submissions from beta users land in the same backlog Toby sees.
+// Falls back to localStorage when no database is configured (local dev).
 
 (function () {
   'use strict';
 
   var STORAGE_KEY = 'yardboss_dev_items';
+  var MIGRATION_FLAG = 'yardboss_dev_items_migrated_to_api';
+  var API_BASE = '/api/dev-items';
 
   // ── Type / Status / Priority style maps ──────────────────────────────────
 
@@ -37,29 +41,98 @@
   var activeStatusFilter = 'all';
   var searchQuery        = '';
   var editingId          = null;
+  var useApi             = false;
+  var allItems           = [];
 
-  // ── Storage ───────────────────────────────────────────────────────────────
+  // ── Storage adapters ─────────────────────────────────────────────────────
 
-  function loadItems() {
+  function localList() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      return Promise.resolve(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
     } catch (e) {
-      return [];
+      return Promise.resolve([]);
     }
   }
 
-  function saveItems(items) {
+  function localSaveAll(items) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    return Promise.resolve(items);
   }
+
+  function localCreate(item) {
+    return localList().then(function (items) {
+      items.push(item);
+      return localSaveAll(items).then(function () { return item; });
+    });
+  }
+
+  function localUpdate(id, patch) {
+    return localList().then(function (items) {
+      var item = items.find(function (i) { return i.id === id; });
+      if (!item) return null;
+      Object.assign(item, patch);
+      return localSaveAll(items).then(function () { return item; });
+    });
+  }
+
+  function localRemove(id) {
+    return localList().then(function (items) {
+      return localSaveAll(items.filter(function (i) { return i.id !== id; }));
+    });
+  }
+
+  function apiList() {
+    return fetch(API_BASE).then(function (r) { return r.json(); });
+  }
+
+  function apiCreate(item) {
+    return fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    }).then(function (r) { return r.json(); });
+  }
+
+  function apiUpdate(id, patch) {
+    return fetch(API_BASE + '/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch)
+    }).then(function (r) { return r.json(); });
+  }
+
+  function apiRemove(id) {
+    return fetch(API_BASE + '/' + encodeURIComponent(id), { method: 'DELETE' });
+  }
+
+  function listItems()        { return useApi ? apiList()        : localList(); }
+  function createItem(item)   { return useApi ? apiCreate(item)  : localCreate(item); }
+  function updateItem(id, p)  { return useApi ? apiUpdate(id, p)  : localUpdate(id, p); }
+  function removeItem(id)     { return useApi ? apiRemove(id)     : localRemove(id); }
 
   function generateId() {
     return 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
   }
 
+  // One-time migration of any items already in this browser's localStorage
+  // into the shared API store (only relevant where a database is connected).
+  function migrateLocalToApi() {
+    if (localStorage.getItem(MIGRATION_FLAG)) return Promise.resolve();
+    return localList().then(function (items) {
+      if (!items.length) {
+        localStorage.setItem(MIGRATION_FLAG, '1');
+        return;
+      }
+      return Promise.all(items.map(function (item) { return apiCreate(item); }))
+        .then(function () { localStorage.setItem(MIGRATION_FLAG, '1'); })
+        .catch(function (err) { console.error('[dev] migration to API failed:', err); });
+    });
+  }
+
   // ── Filtering ─────────────────────────────────────────────────────────────
 
   function getFilteredItems() {
-    var items = loadItems();
+    var items = allItems.slice();
     if (activeTypeFilter !== 'all') {
       items = items.filter(function (i) { return i.type === activeTypeFilter; });
     }
@@ -91,7 +164,7 @@
   // ── KPI strip ─────────────────────────────────────────────────────────────
 
   function renderKpiStrip() {
-    var all = loadItems();
+    var all = allItems;
     var counts = { feature: 0, improve: 0, bug: 0, remove: 0, done: 0, total: all.length };
     all.forEach(function (i) {
       if (counts[i.type] !== undefined) counts[i.type]++;
@@ -162,6 +235,10 @@
         ? '<div class="dev-item-notes"><i class="fas fa-sticky-note" style="margin-right:5px;opacity:0.5;"></i>' + escHtml(item.notes) + '</div>'
         : '';
 
+      var betaBadge = item.source === 'beta'
+        ? '<span class="dev-priority-badge" style="color:#0ea5e9;" title="Submitted via beta feedback"><i class="fas fa-user-friends"></i> BETA</span>'
+        : '';
+
       var nextStatus = STATUS_CYCLE[(STATUS_CYCLE.indexOf(item.status) + 1) % STATUS_CYCLE.length];
 
       return '<div class="dev-item ' + (isDone ? 'done' : '') + ' ' + (isCancelled ? 'cancelled' : '') + '" '
@@ -171,6 +248,7 @@
         + '<div class="dev-item-meta">'
         + '<span class="dev-type-badge" style="background:' + ts.bg + ';color:' + ts.color + ';">' + ts.label + '</span>'
         + '<span class="dev-priority-badge" style="color:' + ps.color + ';">' + ps.label + '</span>'
+        + betaBadge
         + '</div>'
 
         + '<div class="dev-item-title' + (isDone ? ' done-text' : '') + '">' + escHtml(item.title) + '</div>'
@@ -213,14 +291,13 @@
     container.querySelectorAll('[data-delete]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var id = this.dataset.delete;
-        var items = loadItems();
-        var item = items.find(function (i) { return i.id === id; });
+        var item = allItems.find(function (i) { return i.id === id; });
         if (!item) return;
         if (!confirm('Delete "' + item.title + '"? This cannot be undone.')) return;
-        var updated = items.filter(function (i) { return i.id !== id; });
-        saveItems(updated);
-        renderAll();
-        showToast('Item deleted.', 'warning');
+        removeItem(id).then(function () {
+          showToast('Item deleted.', 'warning');
+          return refresh();
+        });
       });
     });
   }
@@ -228,15 +305,13 @@
   // ── Status quick-advance ──────────────────────────────────────────────────
 
   function updateItemStatus(id, newStatus) {
-    var items = loadItems();
-    var item = items.find(function (i) { return i.id === id; });
+    var item = allItems.find(function (i) { return i.id === id; });
     if (!item) return;
-    item.status = newStatus;
-    item.updatedAt = new Date().toISOString();
-    saveItems(items);
-    renderAll();
-    var ss = STATUS_STYLE[newStatus];
-    showToast('"' + item.title.slice(0, 40) + '" → ' + ss.label, 'success');
+    updateItem(id, { status: newStatus }).then(function () {
+      var ss = STATUS_STYLE[newStatus];
+      showToast('"' + item.title.slice(0, 40) + '" → ' + ss.label, 'success');
+      return refresh();
+    });
   }
 
   // ── Modal ─────────────────────────────────────────────────────────────────
@@ -252,8 +327,7 @@
   }
 
   function openEditModal(id) {
-    var items = loadItems();
-    var item = items.find(function (i) { return i.id === id; });
+    var item = allItems.find(function (i) { return i.id === id; });
     if (!item) return;
     editingId = id;
     document.getElementById('devModalTitle').textContent = 'Edit Item';
@@ -281,43 +355,35 @@
     var tagsRaw = document.getElementById('devTags').value.trim();
     var tags = tagsRaw ? tagsRaw.split(',').map(function (t) { return t.trim(); }).filter(Boolean) : [];
 
-    var items = loadItems();
     var now = new Date().toISOString();
+    var fields = {
+      title: title,
+      type: document.getElementById('devType').value,
+      priority: document.getElementById('devPriority').value,
+      status: document.getElementById('devStatus').value,
+      description: document.getElementById('devDescription').value.trim() || null,
+      tags: tags,
+      notes: document.getElementById('devNotes').value.trim() || null
+    };
 
     if (editingId) {
-      var idx = items.findIndex(function (i) { return i.id === editingId; });
-      if (idx > -1) {
-        items[idx] = Object.assign(items[idx], {
-          title: title,
-          type: document.getElementById('devType').value,
-          priority: document.getElementById('devPriority').value,
-          status: document.getElementById('devStatus').value,
-          description: document.getElementById('devDescription').value.trim() || null,
-          tags: tags,
-          notes: document.getElementById('devNotes').value.trim() || null,
-          updatedAt: now
-        });
+      updateItem(editingId, fields).then(function () {
         showToast('Item updated.', 'success');
-      }
+        closeModal();
+        return refresh();
+      });
     } else {
-      items.push({
+      var item = Object.assign({
         id: generateId(),
-        title: title,
-        type: document.getElementById('devType').value,
-        priority: document.getElementById('devPriority').value,
-        status: document.getElementById('devStatus').value,
-        description: document.getElementById('devDescription').value.trim() || null,
-        tags: tags,
-        notes: document.getElementById('devNotes').value.trim() || null,
         createdAt: now,
         updatedAt: now
+      }, fields);
+      createItem(item).then(function () {
+        showToast('Item added.', 'success');
+        closeModal();
+        return refresh();
       });
-      showToast('Item added.', 'success');
     }
-
-    saveItems(items);
-    closeModal();
-    renderAll();
   }
 
   // ── Filter button sync ────────────────────────────────────────────────────
@@ -365,7 +431,7 @@
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  // ── Render all ────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   function renderAll() {
     renderKpiStrip();
@@ -373,10 +439,25 @@
     syncFilterBtns();
   }
 
+  function refresh() {
+    return listItems().then(function (items) {
+      allItems = items || [];
+      renderAll();
+    }).catch(function (err) {
+      console.error('[dev] load error:', err);
+      var container = document.getElementById('devItemsList');
+      if (container) container.innerHTML = '<div class="dev-empty"><p>Could not load dev items.</p></div>';
+    });
+  }
+
   // ── DOMContentLoaded ──────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', function () {
-    renderAll();
+    fetch('/api/env').then(function (r) { return r.json(); })
+      .then(function (env) { useApi = !!env.hasDatabase; })
+      .catch(function () { useApi = false; })
+      .then(function () { return useApi ? migrateLocalToApi() : Promise.resolve(); })
+      .then(refresh);
 
     // New item button
     document.getElementById('newItemBtn').addEventListener('click', openNewModal);

@@ -6,6 +6,23 @@
 const db = require('../db');
 
 async function runMigrations() {
+  // ── Create dev_items table (Dev Tracker — shared across admin + beta users) ─
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS dev_items (
+      id           TEXT PRIMARY KEY,
+      title        TEXT NOT NULL,
+      type         TEXT DEFAULT 'feature',
+      priority     TEXT DEFAULT 'medium',
+      status       TEXT DEFAULT 'pending',
+      description  TEXT,
+      tags         JSONB DEFAULT '[]',
+      notes        TEXT,
+      source       TEXT DEFAULT 'admin',
+      created_at   TIMESTAMPTZ DEFAULT NOW(),
+      updated_at   TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
   // ── Create lots table ─────────────────────────────────────────────────────
   await db.query(`
     CREATE TABLE IF NOT EXISTS lots (
@@ -72,6 +89,12 @@ async function runMigrations() {
   await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS move_out_date DATE`);
   await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS rejection_reason TEXT`);
   await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS additional_drivers JSONB DEFAULT '[]'`);
+
+  // ── Parking expiration / renewal tracking columns ────────────────────────
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS due_date DATE`);
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS renewal_status TEXT DEFAULT 'current'`);
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS rate_type TEXT DEFAULT 'monthly'`);
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS last_reminder_sent_at TIMESTAMPTZ`);
 
   console.log('[migrate] Tables ready.');
 
@@ -181,6 +204,16 @@ async function runMigrations() {
   }
 
   console.log('[migrate] Seeded ' + tenants.length + ' tenants.');
+
+  // Backfill due_date for rows that don't have one yet — use end_date if set,
+  // else start_date + 1 month. Run after seeding so newly-seeded rows are included.
+  await db.query(`
+    UPDATE tenants
+    SET due_date = COALESCE(end_date, (start_date + INTERVAL '1 month')::date)
+    WHERE due_date IS NULL AND (end_date IS NOT NULL OR start_date IS NOT NULL)
+  `);
+
+  console.log('[migrate] Backfilled due_date.');
 }
 
 module.exports = { runMigrations };

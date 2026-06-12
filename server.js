@@ -53,6 +53,7 @@ const scanInsuranceRouter = require('./routes/scan-insurance');
 const sendReceiptRouter = require('./routes/send-receipt');
 const broadcastRouter = require('./routes/broadcast');
 const webhooksRouter = require('./routes/webhooks');
+const devItemsRouter = require('./routes/dev-items');
 
 app.use('/api/payments', paymentsRouter);
 app.use('/api/reservations', reservationsRouter);
@@ -63,6 +64,7 @@ app.use('/api/scan-insurance', scanInsuranceRouter);
 app.use('/api/send-receipt', sendReceiptRouter);
 app.use('/api/broadcast', broadcastRouter);
 app.use('/api/webhooks', webhooksRouter);
+app.use('/api/dev-items', devItemsRouter);
 // Required env vars: ANTHROPIC_API_KEY, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE
 // SMS env vars: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
 
@@ -73,6 +75,7 @@ app.get('/api/env', (req, res) => {
     isSandbox: IS_SANDBOX,
     mockPayments: process.env.MOCK_PAYMENTS === 'true',
     stripeConnected: !!(process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('YOUR_')),
+    hasDatabase: !!process.env.DATABASE_URL,
     version: '1.0.0',
     timestamp: new Date().toISOString(),
   });
@@ -108,6 +111,17 @@ app.use((err, req, res, next) => {
 // ─── DB Migrations (runs on every startup, idempotent) ────────────────────────
 if (process.env.DATABASE_URL) {
   require('./scripts/migrate').runMigrations().catch(console.error);
+}
+
+// ─── Scheduled jobs ─────────────────────────────────────────────────────────────
+// Daily Parking Due Report — 8:00 AM America/New_York, every day.
+if (process.env.DATABASE_URL) {
+  const cron = require('node-cron');
+  const { runDailyDueReport } = require('./scripts/daily-due-report');
+  cron.schedule('0 8 * * *', () => {
+    runDailyDueReport().catch(err => console.error('[daily-due-report] Error:', err));
+  }, { timezone: 'America/New_York' });
+  console.log('[Schedule] Daily Parking Due Report — 8:00 AM America/New_York');
 }
 
 // ─── Start ────────────────────────────────────────────────────────────────────
