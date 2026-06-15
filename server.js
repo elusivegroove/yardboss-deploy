@@ -130,6 +130,20 @@ if (process.env.DATABASE_URL) {
   }
 }
 
+// Monthly Renewal Billing — 8:00 AM America/New_York, 1st of every month.
+if (process.env.DATABASE_URL) {
+  try {
+    const cron = require('node-cron');
+    const { runMonthlyRenewalBilling } = require('./scripts/monthly-renewal-billing');
+    cron.schedule('0 8 1 * *', () => {
+      runMonthlyRenewalBilling().catch(err => console.error('[monthly-renewal-billing] Error:', err));
+    }, { timezone: 'America/New_York' });
+    console.log('[Schedule] Monthly Renewal Billing — 8:00 AM America/New_York, 1st of month');
+  } catch (err) {
+    console.error('[Schedule] Monthly Renewal Billing not scheduled:', err.message);
+  }
+}
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   const banner = IS_SANDBOX
