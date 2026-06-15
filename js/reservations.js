@@ -873,12 +873,25 @@ function populatePricingPlanSelect(selectEl, vehicleType, selectedPlanId) {
   selectEl.value = (selectedPlanId && options.some(function(p){ return p.id===selectedPlanId; })) ? selectedPlanId : '';
 }
 
+// Counts how many spaces a tenant occupies — 1 for the primary space plus
+// however many are listed in the "Additional Spaces" field (comma-separated).
+function countTenantSpaces(additionalSpacesEl) {
+  if (!additionalSpacesEl) return 1;
+  var extra = additionalSpacesEl.value.split(',')
+    .map(function(s) { return s.trim(); })
+    .filter(function(s) { return s.length > 0; })
+    .length;
+  return 1 + extra;
+}
+
 // Applies the selected plan's price to the rate field and shows a hint, or
-// leaves the rate field as-is for manual entry. If rateTypeEl is given, the
-// plan's billing cadence (day/week/month) is mirrored into it. If both
-// startDateEl and dueDateEl are given, the due date is set to the start date
-// plus one plan period.
-function applyPricingPlanSelection(planSelectEl, rateEl, hintEl, rateTypeEl, startDateEl, dueDateEl) {
+// leaves the rate field as-is for manual entry. If additionalSpacesEl is
+// given, the rate is multiplied by the tenant's total space count (1 primary
+// + any additional spaces) so multi-space tenants get the combined total. If
+// rateTypeEl is given, the plan's billing cadence (day/week/month) is
+// mirrored into it. If both startDateEl and dueDateEl are given, the due date
+// is set to the start date plus one plan period.
+function applyPricingPlanSelection(planSelectEl, rateEl, hintEl, rateTypeEl, startDateEl, dueDateEl, additionalSpacesEl) {
   var planId = planSelectEl.value;
   if (!planId) {
     hintEl.textContent = '';
@@ -886,8 +899,12 @@ function applyPricingPlanSelection(planSelectEl, rateEl, hintEl, rateTypeEl, sta
   }
   var plan = findPricingPlanById(planId);
   if (!plan) return;
-  rateEl.value = plan.price;
-  hintEl.textContent = plan.label + ' plan — $' + plan.price.toFixed(2) + ' (you can still adjust this manually)';
+  var spaceCount = countTenantSpaces(additionalSpacesEl);
+  var total = Math.round(plan.price * spaceCount * 100) / 100;
+  rateEl.value = total;
+  hintEl.textContent = spaceCount > 1
+    ? plan.label + ' plan — $' + plan.price.toFixed(2) + ' × ' + spaceCount + ' spaces = $' + total.toFixed(2) + ' (you can still adjust this manually)'
+    : plan.label + ' plan — $' + plan.price.toFixed(2) + ' (you can still adjust this manually)';
   if (rateTypeEl) rateTypeEl.value = unitToRateType(plan.unit);
   if (startDateEl && dueDateEl) {
     dueDateEl.value = computeDueDateFromPlan(startDateEl.value, plan);
@@ -1302,7 +1319,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   });
   document.getElementById('atPricingPlan').addEventListener('change', function() {
     applyPricingPlanSelection(this, document.getElementById('atRate'), document.getElementById('atRateHint'),
-      document.getElementById('atRateType'), document.getElementById('atStart'), document.getElementById('atDueDate'));
+      document.getElementById('atRateType'), document.getElementById('atStart'), document.getElementById('atDueDate'),
+      document.getElementById('atAdditionalSpaces'));
   });
   document.getElementById('wiVehicleType').addEventListener('change', function() {
     populatePricingPlanSelect(document.getElementById('wiPricingPlan'), this.value);
@@ -1310,7 +1328,25 @@ document.addEventListener('DOMContentLoaded', async function() {
   });
   document.getElementById('wiPricingPlan').addEventListener('change', function() {
     applyPricingPlanSelection(this, document.getElementById('wiRate'), document.getElementById('wiRateHint'),
-      document.getElementById('wiRateType'), document.getElementById('wiStart'), document.getElementById('wiDueDate'));
+      document.getElementById('wiRateType'), document.getElementById('wiStart'), document.getElementById('wiDueDate'),
+      document.getElementById('wiAdditionalSpaces'));
+  });
+
+  // Recalculate the rate when "Additional Spaces" changes, as long as a
+  // pricing plan (not manual entry) is selected.
+  document.getElementById('atAdditionalSpaces').addEventListener('input', function() {
+    if (document.getElementById('atPricingPlan').value) {
+      applyPricingPlanSelection(document.getElementById('atPricingPlan'), document.getElementById('atRate'), document.getElementById('atRateHint'),
+        document.getElementById('atRateType'), document.getElementById('atStart'), document.getElementById('atDueDate'),
+        document.getElementById('atAdditionalSpaces'));
+    }
+  });
+  document.getElementById('wiAdditionalSpaces').addEventListener('input', function() {
+    if (document.getElementById('wiPricingPlan').value) {
+      applyPricingPlanSelection(document.getElementById('wiPricingPlan'), document.getElementById('wiRate'), document.getElementById('wiRateHint'),
+        document.getElementById('wiRateType'), document.getElementById('wiStart'), document.getElementById('wiDueDate'),
+        document.getElementById('wiAdditionalSpaces'));
+    }
   });
 
   // Insurance file input
