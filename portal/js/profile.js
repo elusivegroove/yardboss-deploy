@@ -43,6 +43,8 @@
       (t.company ? t.company + ' — ' : '') + 'Space' + (spaceNums.length > 1 ? 's ' : ' ') + spaceNums.join(', ');
 
     var v = t.vehicle || {};
+    document.getElementById('profilePhone').value = t.phone || '';
+    document.getElementById('profileSmsConsent').checked = !!t.smsConsent;
     document.getElementById('vehicleMake').value = v.make || '';
     document.getElementById('vehicleModel').value = v.model || '';
     document.getElementById('vehicleYear').value = v.year || '';
@@ -137,6 +139,8 @@
     var yearVal = document.getElementById('vehicleYear').value;
     var payload = {
       id: tenantId,
+      phone: document.getElementById('profilePhone').value.trim(),
+      smsConsent: document.getElementById('profileSmsConsent').checked,
       vehicle: {
         make: document.getElementById('vehicleMake').value.trim(),
         model: document.getElementById('vehicleModel').value.trim(),
