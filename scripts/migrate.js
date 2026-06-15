@@ -123,6 +123,9 @@ async function runMigrations() {
   // ── Late fee exemption (per-tenant opt-out of the monthly late fee job) ──
   await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS late_fee_exempt BOOLEAN DEFAULT false`);
 
+  // ── SMS consent (TCPA opt-in for account-related text messages) ──
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS sms_consent BOOLEAN DEFAULT false`);
+
   console.log('[migrate] Tables ready.');
 
   // ── Default pricing plans (Semi Truck + RV) ──────────────────────────────

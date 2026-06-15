@@ -972,6 +972,7 @@ function openEditTenantModal(tenantId) {
   document.getElementById('atEmail').value   = t.email || '';
   document.getElementById('atPhone').value   = t.phone || '';
   document.getElementById('atCompany').value = t.company || '';
+  document.getElementById('atSmsConsent').checked = !!t.smsConsent;
   document.getElementById('atSpace').value   = t.spaceNumber || '';
   document.getElementById('atAdditionalSpaces').value = (t.additionalSpaces || []).join(', ');
   document.getElementById('atRate').value    = t.monthlyRate || '';
@@ -1037,6 +1038,7 @@ async function handleAddTenantSubmit(e) {
   var email   = document.getElementById('atEmail').value.trim();
   var phone   = document.getElementById('atPhone').value.trim();
   var company = document.getElementById('atCompany').value.trim();
+  var smsConsent = document.getElementById('atSmsConsent').checked;
   var lotId   = document.getElementById('atLotId').value;
   var space   = document.getElementById('atSpace').value.trim();
   var additionalSpaces = document.getElementById('atAdditionalSpaces').value.split(',')
@@ -1089,7 +1091,7 @@ async function handleAddTenantSubmit(e) {
     insuranceExpDate:insuranceExpDate,
     autoRenew:autoRenew, renewalPeriod:renewalPeriod, renewalRate:renewalRate,
     paymentMethod:paymentMethod, autopayCard:autopayCard, autopayNextDate:autopayNextDate,
-    rateType:rateType, dueDate:dueDate
+    rateType:rateType, dueDate:dueDate, smsConsent:smsConsent
   };
   tenantData.renewalStatus = computeRenewalStatus(Object.assign({}, editId ? getTenant(editId) : {}, {
     dueDate: dueDate, rateType: rateType, status: status
@@ -1167,6 +1169,7 @@ async function handleWalkInSubmit(e) {
   var plateState = '';
   var payAmt     = parseFloat(document.getElementById('wiPayAmount').value) || 0;
   var payMethod  = document.getElementById('wiPayMethod').value;
+  var smsConsent = document.getElementById('wiSmsConsent').checked;
 
   if (!name || !lotId || !space) {
     showToast('Name, lot, and space are required.', 'error');
@@ -1196,7 +1199,7 @@ async function handleWalkInSubmit(e) {
     vehicle: { make: '', model: '', year: null, plate: plate, type: vType },
     plateState: plateState, truckNumber: null, trailerNumber: null,
     registrationStatus: 'pending', walkIn: true, payments: payments,
-    paymentMethod: 'manual', rateType: rateType, dueDate: dueDate
+    paymentMethod: 'manual', rateType: rateType, dueDate: dueDate, smsConsent: smsConsent
   };
   tenantData.renewalStatus = computeRenewalStatus(tenantData);
 
@@ -1494,10 +1497,10 @@ function getBroadcastRecipients() {
 function updateBroadcastPreview() {
   var list = getBroadcastRecipients();
   var withEmail = list.filter(function(t){ return t.email; }).length;
-  var withPhone = list.filter(function(t){ return t.phone; }).length;
+  var withSMSConsent = list.filter(function(t){ return t.phone && t.smsConsent; }).length;
   var el = document.getElementById('broadcastRecipientPreview');
   el.innerHTML = '<strong style="color:var(--navy);">'+list.length+' tenant'+(list.length!==1?'s':'')+' selected</strong>'
-    +' &nbsp;·&nbsp; '+withEmail+' with email &nbsp;·&nbsp; '+withPhone+' with phone';
+    +' &nbsp;·&nbsp; '+withEmail+' with email &nbsp;·&nbsp; '+withSMSConsent+' opted in for SMS';
 }
 
 function openBroadcastModal() {
@@ -1537,7 +1540,7 @@ function sendBroadcast() {
   if (viaSMS)   channels.push('sms');
 
   var tenants = list.map(function(t) {
-    return { name: t.name, email: t.email || '', phone: t.phone || '' };
+    return { name: t.name, email: t.email || '', phone: (t.smsConsent ? (t.phone || '') : '') };
   });
 
   var btn = document.getElementById('sendBroadcastBtn');

@@ -54,6 +54,7 @@ function rowToTenant(row) {
     additionalSpaces:       row.additional_spaces || [],
     spaceNumbers:           [row.space_number].concat(row.additional_spaces || []).filter(Boolean),
     lateFeeExempt:          !!row.late_fee_exempt,
+    smsConsent:             !!row.sms_consent,
   };
 }
 
@@ -93,7 +94,8 @@ router.post('/', async (req, res) => {
         insurance_company, insurance_exp_date, auto_renew, renewal_period,
         renewal_rate, payment_method, autopay_card, autopay_next_date, payments,
         price_locked, move_out_date, rejection_reason, additional_drivers,
-        due_date, renewal_status, rate_type, additional_spaces, late_fee_exempt
+        due_date, renewal_status, rate_type, additional_spaces, late_fee_exempt,
+        sms_consent
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,
         $9,$10,$11,$12,$13,$14,
@@ -101,7 +103,8 @@ router.post('/', async (req, res) => {
         $19,$20,$21,$22,
         $23,$24,$25,$26,$27,
         $28,$29,$30,$31,
-        $32,$33,$34,$35,$36
+        $32,$33,$34,$35,$36,
+        $37
       ) RETURNING *
     `, [
       id,
@@ -139,7 +142,8 @@ router.post('/', async (req, res) => {
       b.renewalStatus || 'current',
       b.rateType || 'monthly',
       b.additionalSpaces ? JSON.stringify(b.additionalSpaces) : '[]',
-      b.lateFeeExempt || false
+      b.lateFeeExempt || false,
+      b.smsConsent || false
     ]);
     res.status(201).json(rowToTenant(result.rows[0]));
   } catch (err) {
@@ -192,6 +196,7 @@ router.patch('/:id', async (req, res) => {
       lastReminderSentAt:     'last_reminder_sent_at',
       additionalSpaces:       'additional_spaces',
       lateFeeExempt:          'late_fee_exempt',
+      smsConsent:             'sms_consent',
     };
 
     const jsonFields = new Set(['vehicle', 'insurance_doc', 'payments', 'additional_drivers', 'additional_spaces']);

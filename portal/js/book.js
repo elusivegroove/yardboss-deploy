@@ -9,7 +9,7 @@ const state = {
   lotId: null, lotName: '', spaceType: null, rate: 0,
   planId: null, planLabel: '', unit: 'month', qty: 1,
   startDate: null, endDate: null,
-  tenantName: '', company: '', email: '', phone: '',
+  tenantName: '', company: '', email: '', phone: '', smsConsent: false,
   vehicleMake: '', vehicleModel: '', vehicleYear: '', vehiclePlate: '',
 };
 
@@ -301,6 +301,7 @@ function validateStep(step) {
     state.tenantName = name;
     state.email = email;
     state.phone = phone;
+    state.smsConsent = document.getElementById('smsConsent').checked;
     state.company = document.getElementById('company').value.trim();
     return true;
   }
@@ -380,6 +381,7 @@ async function submitPayment() {
       tenantName: state.tenantName,
       email: state.email,
       phone: state.phone,
+      smsConsent: state.smsConsent,
       company: state.company,
       vehicleMake: state.vehicleMake,
       vehicleModel: state.vehicleModel,

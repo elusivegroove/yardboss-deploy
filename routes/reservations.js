@@ -21,7 +21,7 @@ router.get('/:id', (req, res) => {
 // POST /api/reservations — create new reservation (from portal or admin)
 router.post('/', (req, res) => {
   const {
-    lotId, spaceType, tenantName, email, phone, company,
+    lotId, spaceType, tenantName, email, phone, company, smsConsent,
     vehicleMake, vehicleModel, vehicleYear, vehiclePlate,
     startDate, endDate, monthlyRate, pricingPlan,
   } = req.body;
@@ -76,6 +76,7 @@ router.post('/', (req, res) => {
     tenantName,
     email,
     phone: phone || '',
+    smsConsent: !!smsConsent,
     company: company || '',
     vehicleMake: vehicleMake || '',
     vehicleModel: vehicleModel || '',
