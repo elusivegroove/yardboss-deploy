@@ -320,13 +320,15 @@ function openTenantPanel(tenantId) {
         +'</div></div>';
     }
     var cls = p.status==='paid'?'badge-green':p.status==='late'?'badge-yellow':'badge-red';
-    var methodIcon = p.method==='autopay'
+    var methodIcon = (p.method==='autopay' || p.method==='card')
       ? '<i class="fas fa-credit-card" style="margin-right:3px;color:var(--teal);font-size:0.7rem;"></i>'
       : '<i class="fas fa-money-bill-wave" style="margin-right:3px;color:var(--gray-400);font-size:0.7rem;"></i>';
+    var methodLabel = p.method==='autopay' ? 'Auto-Pay' : p.method==='card' ? 'Card' : p.method==='check' ? 'Check' : p.method==='cash' ? 'Cash' : 'Manual';
+    if (p.cardSurcharge) methodLabel += ' (incl. 3.5% fee)';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray-100);">'
       +'<div style="display:flex;flex-direction:column;gap:2px;">'
       +'<span style="font-size:0.82rem;color:var(--gray-500);">'+formatDate(p.date)+'</span>'
-      +'<span style="font-size:0.72rem;color:var(--gray-400);">'+methodIcon+(p.method==='autopay'?'Auto-Pay':'Manual')+'</span>'
+      +'<span style="font-size:0.72rem;color:var(--gray-400);">'+methodIcon+methodLabel+'</span>'
       +'</div>'
       +'<div style="display:flex;align-items:center;gap:5px;">'
       +'<span style="font-weight:600;font-size:0.875rem;">'+formatCurrency(p.amount)+'</span>'
@@ -504,6 +506,29 @@ async function handleRejectSubmit() {
   if (_panelTenantId === tenantId) openTenantPanel(tenantId);
 }
 
+// Formats a dollar amount with cents (formatCurrency() rounds to whole dollars,
+// which isn't precise enough for the exact amount to charge a card).
+function fmtUSD2(n) {
+  return '$' + Number(n || 0).toFixed(2);
+}
+
+// Shows/hides a "total to charge" hint when the selected payment method is
+// "Card" — the 3.5% card processing surcharge is added on top of the entered
+// amount for ANY card payment (walk-in, manual ledger entry, or auto-pay).
+function updateCardFeeHint(amountFieldId, methodFieldId, hintFieldId) {
+  var hint = document.getElementById(hintFieldId);
+  var method = document.getElementById(methodFieldId).value;
+  var amount = parseFloat(document.getElementById(amountFieldId).value) || 0;
+  if (method !== 'card' || amount <= 0) {
+    hint.style.display = 'none';
+    return;
+  }
+  var surcharge = YardBossReceipts.calcSurcharge(amount);
+  var total = Math.round((amount + surcharge) * 100) / 100;
+  hint.textContent = 'Total to charge card: ' + fmtUSD2(total) + ' (includes ' + fmtUSD2(surcharge) + ' card processing fee, 3.5%)';
+  hint.style.display = '';
+}
+
 // ── Customer Ledger — Add Charge / Record Payment ────────────────────────
 var _ledgerEntryType = 'charge';
 
@@ -523,6 +548,7 @@ function openLedgerEntryModal(tenantId, type) {
   document.getElementById('ledgerEntrySubmitBtn').innerHTML = isCharge
     ? '<i class="fas fa-save"></i> Add Charge'
     : '<i class="fas fa-save"></i> Record Payment';
+  document.getElementById('leCardFeeHint').style.display = 'none';
 
   document.getElementById('ledgerEntryModal').classList.add('open');
 }
@@ -544,7 +570,17 @@ async function handleLedgerEntrySubmit(e) {
     entry = { date: date, amount: amount, type: 'charge', description: description };
   } else {
     var method = document.getElementById('leMethod').value;
-    entry = { date: date, amount: amount, status: 'paid', method: method, type: 'payment' };
+    if (method === 'card') {
+      var leSurcharge = YardBossReceipts.calcSurcharge(amount);
+      var leTotal = Math.round((amount + leSurcharge) * 100) / 100;
+      entry = {
+        date: date, amount: leTotal, baseAmount: amount, cardSurcharge: leSurcharge,
+        status: 'paid', method: 'card', type: 'payment',
+        note: 'Card payment (' + fmtUSD2(amount) + ' + ' + fmtUSD2(leSurcharge) + ' card surcharge)'
+      };
+    } else {
+      entry = { date: date, amount: amount, status: 'paid', method: method, type: 'payment' };
+    }
   }
 
   try {
@@ -706,7 +742,9 @@ function runAutoPay(tenantId) {
   var btn = document.getElementById('panelRunAutopayBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...'; }
 
-  var amount = tenant.renewalRate || tenant.monthlyRate || 0;
+  var baseAmount = tenant.renewalRate || tenant.monthlyRate || 0;
+  var surcharge = YardBossReceipts.calcSurcharge(baseAmount);
+  var amount = Math.round((baseAmount + surcharge) * 100) / 100;
 
   fetch('/api/payments/process-autopay', {
     method: 'POST',
@@ -716,9 +754,13 @@ function runAutoPay(tenantId) {
   .then(function(r) { return r.json(); })
   .then(function(res) {
     if (res.error) throw new Error(res.error);
-    var payment = { date: new Date().toISOString().split('T')[0], amount: amount, status: 'paid', method: 'autopay' };
+    var payment = {
+      date: new Date().toISOString().split('T')[0], amount: amount, baseAmount: baseAmount, cardSurcharge: surcharge,
+      status: 'paid', method: 'autopay',
+      note: 'Auto-pay (' + fmtUSD2(baseAmount) + ' + ' + fmtUSD2(surcharge) + ' card surcharge)'
+    };
     tenant.payments.unshift(payment);
-    showToast(res.mock ? 'Auto-pay processed (mock mode)' : 'Auto-pay of '+formatCurrency(amount)+' processed', 'success');
+    showToast(res.mock ? 'Auto-pay processed (mock mode) — ' + fmtUSD2(amount) + ' (incl. 3.5% card fee)' : 'Auto-pay of '+fmtUSD2(amount)+' processed (incl. 3.5% card fee)', 'success');
     openTenantPanel(tenantId); // refresh panel
   })
   .catch(function(e) { showToast('Auto-pay failed: '+e.message, 'error'); })
@@ -1068,6 +1110,7 @@ function openWalkInModal() {
   document.getElementById('wiRateHint').textContent = '';
   document.getElementById('wiRateType').value = 'monthly';
   document.getElementById('wiDueDate').value = '';
+  document.getElementById('wiCardFeeHint').style.display = 'none';
   document.getElementById('walkInModal').classList.add('open');
   setTimeout(function(){ document.getElementById('wiName').focus(); }, 80);
 }
@@ -1101,7 +1144,17 @@ async function handleWalkInSubmit(e) {
   var initials = name.split(' ').map(function(p){ return p[0]; }).join('').toUpperCase().slice(0,2);
   var payments = [];
   if (payAmt > 0 && payMethod !== 'none') {
-    payments.push({ date: start || new Date().toISOString().split('T')[0], amount: payAmt, status: 'paid', method: payMethod });
+    if (payMethod === 'card') {
+      var wiSurcharge = YardBossReceipts.calcSurcharge(payAmt);
+      var wiTotal = Math.round((payAmt + wiSurcharge) * 100) / 100;
+      payments.push({
+        date: start || new Date().toISOString().split('T')[0], amount: wiTotal, baseAmount: payAmt, cardSurcharge: wiSurcharge,
+        status: 'paid', method: 'card',
+        note: 'Walk-in payment (' + fmtUSD2(payAmt) + ' + ' + fmtUSD2(wiSurcharge) + ' card surcharge)'
+      });
+    } else {
+      payments.push({ date: start || new Date().toISOString().split('T')[0], amount: payAmt, status: 'paid', method: payMethod });
+    }
   }
 
   var tenantData = {
@@ -1197,6 +1250,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('closeWalkInModal').addEventListener('click', function(){ document.getElementById('walkInModal').classList.remove('open'); });
   document.getElementById('cancelWalkInModal').addEventListener('click', function(){ document.getElementById('walkInModal').classList.remove('open'); });
   document.getElementById('walkInModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+  document.getElementById('wiPayAmount').addEventListener('input', function(){ updateCardFeeHint('wiPayAmount', 'wiPayMethod', 'wiCardFeeHint'); });
+  document.getElementById('wiPayMethod').addEventListener('change', function(){ updateCardFeeHint('wiPayAmount', 'wiPayMethod', 'wiCardFeeHint'); });
 
   // Add tenant button
   var addBtn = document.getElementById('addTenantBtn');
@@ -1262,6 +1317,8 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('cancelLedgerEntryModal').addEventListener('click', function(){ document.getElementById('ledgerEntryModal').classList.remove('open'); });
   document.getElementById('ledgerEntryModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
   document.getElementById('ledgerEntryForm').addEventListener('submit', handleLedgerEntrySubmit);
+  document.getElementById('leAmount').addEventListener('input', function(){ updateCardFeeHint('leAmount', 'leMethod', 'leCardFeeHint'); });
+  document.getElementById('leMethod').addEventListener('change', function(){ updateCardFeeHint('leAmount', 'leMethod', 'leCardFeeHint'); });
 
   // Additional Driver modal
   document.getElementById('closeAdditionalDriverModal').addEventListener('click', function(){ document.getElementById('additionalDriverModal').classList.remove('open'); });

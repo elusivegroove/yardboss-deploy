@@ -14,6 +14,14 @@ var YardBossReceipts = (function() {
     email: 'sebring@transvegatruckcenter.com'
   };
 
+  // Card processing surcharge — applies to ANY payment charged to a credit
+  // card (auto-pay, walk-in, or a manual "Card" payment recorded on the ledger).
+  var CARD_SURCHARGE_RATE = 0.035;
+
+  function calcSurcharge(amount) {
+    return Math.round(amount * CARD_SURCHARGE_RATE * 100) / 100;
+  }
+
   function padLeft(n, len) {
     return String(n).padStart(len, '0');
   }
@@ -51,7 +59,11 @@ var YardBossReceipts = (function() {
     var amount = payment ? payment.amount : (tenant.monthlyRate || 0);
     var method = payment ? (payment.method || 'Manual') : 'Manual';
     var payStatus = payment ? (payment.status || 'paid') : 'paid';
-    var methodLabel = method === 'autopay' ? 'Auto-Pay (Card on file)' : method.charAt(0).toUpperCase() + method.slice(1);
+    var methodLabel = method === 'autopay' ? 'Auto-Pay (Card on file)'
+      : method === 'card' ? 'Card'
+      : method.charAt(0).toUpperCase() + method.slice(1);
+    var cardSurcharge = (payment && payment.cardSurcharge) || 0;
+    var baseAmount = (payment && payment.baseAmount != null) ? payment.baseAmount : amount;
 
     return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
       '<style>' +
@@ -114,7 +126,10 @@ var YardBossReceipts = (function() {
 
       '<div class="section-title">Charges</div>' +
       '<div class="line-items">' +
-      '<div class="line-item"><span>Monthly Parking — Space ' + (tenant.spaceNumber||'') + '</span><span>' + fmtCurrency(amount) + '</span></div>' +
+      '<div class="line-item"><span>Monthly Parking — Space ' + (tenant.spaceNumber||'') + '</span><span>' + fmtCurrency(baseAmount) + '</span></div>' +
+      (cardSurcharge > 0
+        ? '<div class="line-item"><span>Card Processing Fee (' + (CARD_SURCHARGE_RATE*100).toFixed(1) + '%)</span><span>' + fmtCurrency(cardSurcharge) + '</span></div>'
+        : '') +
       '<div class="line-item total"><span>Total Paid</span><span>' + fmtCurrency(amount) + '</span></div>' +
       '</div>' +
 
@@ -216,5 +231,8 @@ var YardBossReceipts = (function() {
     });
   }
 
-  return { print: print, preview: preview, email: email, generateHTML: generateHTML };
+  return {
+    print: print, preview: preview, email: email, generateHTML: generateHTML,
+    CARD_SURCHARGE_RATE: CARD_SURCHARGE_RATE, calcSurcharge: calcSurcharge
+  };
 }());

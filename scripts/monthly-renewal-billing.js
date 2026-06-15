@@ -131,7 +131,7 @@ async function runMonthlyRenewalBilling() {
       const totalAmount = Math.round((amount + surcharge) * 100) / 100;
       const chargeResult = await chargeAutopayTenant(tenant, totalAmount, periodLabel);
       if (chargeResult.success) {
-        payments.push({ date: billingDateStr, amount: totalAmount, type: 'payment', status: 'paid', method: 'autopay', note: `Auto-pay — ${periodLabel} rent (${formatCurrency(amount)} + ${formatCurrency(surcharge)} card surcharge)` });
+        payments.push({ date: billingDateStr, amount: totalAmount, baseAmount: amount, cardSurcharge: surcharge, type: 'payment', status: 'paid', method: 'autopay', note: `Auto-pay — ${periodLabel} rent (${formatCurrency(amount)} + ${formatCurrency(surcharge)} card surcharge)` });
         subject = 'Payment Confirmation — TransVega RV & Truck Center';
         html = buildEmailHtml('YardBoss', chargedEmailBody(tenant, amount, surcharge, totalAmount, periodLabel, billingDateStr));
         summary.surchargeTotal += surcharge;
