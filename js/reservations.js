@@ -1401,6 +1401,25 @@ document.addEventListener('DOMContentLoaded', async function() {
   var importBtn = document.getElementById('importTenantsBtn');
   if (importBtn) importBtn.addEventListener('click', function(){ document.getElementById('importModal').classList.add('open'); });
 
+  // Bulk Update Period button
+  var bulkPeriodBtn = document.getElementById('bulkPeriodBtn');
+  if (bulkPeriodBtn) bulkPeriodBtn.addEventListener('click', openBulkPeriodModal);
+  document.getElementById('closeBulkPeriodModal').addEventListener('click', function(){ document.getElementById('bulkPeriodModal').classList.remove('open'); });
+  document.getElementById('cancelBulkPeriodModal').addEventListener('click', function(){ document.getElementById('bulkPeriodModal').classList.remove('open'); });
+  document.getElementById('bulkPeriodModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+  document.getElementById('applyBulkPeriodBtn').addEventListener('click', applyBulkPeriod);
+  document.querySelectorAll('.bulkp-filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.bulkp-filter-btn').forEach(function(b){
+        b.classList.remove('active');
+        b.style.background='#fff'; b.style.color='var(--gray-500)'; b.style.borderColor='var(--gray-200)';
+      });
+      this.classList.add('active');
+      this.style.background='#8b5cf6'; this.style.color='#fff'; this.style.borderColor='#8b5cf6';
+      updateBulkPeriodPreview();
+    });
+  });
+
   // Broadcast button
   var broadcastBtn = document.getElementById('broadcastBtn');
   if (broadcastBtn) broadcastBtn.addEventListener('click', openBroadcastModal);
@@ -1548,4 +1567,72 @@ function sendBroadcast() {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Broadcast';
   });
+}
+
+// ── Bulk Update Lease Period ──────────────────────────────────────────────
+// Lets staff roll every tenant's Start/End Date over to a new period (e.g.
+// the start of a new month) in one click instead of editing each tenant.
+
+function getBulkPeriodRecipients() {
+  var filter = document.querySelector('.bulkp-filter-btn.active').dataset.filter;
+  if (filter === 'all') return APP_DATA.tenants.slice();
+  return APP_DATA.tenants.filter(function(t) { return t.status === 'active'; });
+}
+
+function updateBulkPeriodPreview() {
+  var list = getBulkPeriodRecipients();
+  document.getElementById('bulkPeriodPreview').textContent =
+    list.length + ' tenant' + (list.length !== 1 ? 's' : '') + ' will be updated.';
+}
+
+function openBulkPeriodModal() {
+  document.getElementById('bulkPeriodStart').value = '';
+  document.getElementById('bulkPeriodEnd').value = '';
+  document.querySelectorAll('.bulkp-filter-btn').forEach(function(b) {
+    var isActive = b.dataset.filter === 'active';
+    b.classList.toggle('active', isActive);
+    b.style.background = isActive ? '#8b5cf6' : '#fff';
+    b.style.color = isActive ? '#fff' : 'var(--gray-500)';
+    b.style.borderColor = isActive ? '#8b5cf6' : 'var(--gray-200)';
+  });
+  updateBulkPeriodPreview();
+  document.getElementById('bulkPeriodModal').classList.add('open');
+}
+
+async function applyBulkPeriod() {
+  var start = document.getElementById('bulkPeriodStart').value;
+  var end = document.getElementById('bulkPeriodEnd').value;
+  if (!start || !end) { showToast('Please choose both a Start Date and End Date.', 'error'); return; }
+  if (end < start) { showToast('End Date must be on or after Start Date.', 'error'); return; }
+
+  var list = getBulkPeriodRecipients();
+  if (!list.length) { showToast('No tenants match that filter.', 'error'); return; }
+
+  if (!confirm('Set Start Date = ' + start + ' and End Date = ' + end + ' for ' + list.length + ' tenant' + (list.length !== 1 ? 's' : '') + '?')) return;
+
+  var btn = document.getElementById('applyBulkPeriodBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+
+  var failed = 0;
+  for (var i = 0; i < list.length; i++) {
+    try {
+      await YB.saveTenant({ id: list[i].id, startDate: start, endDate: end });
+    } catch (e) {
+      failed++;
+    }
+  }
+
+  try {
+    APP_DATA.tenants = await YB.loadTenants();
+  } catch (e) {}
+  updateTabCounts();
+  renderTenantsTable();
+
+  document.getElementById('bulkPeriodModal').classList.remove('open');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-check"></i> Apply';
+
+  var msg = 'Updated ' + (list.length - failed) + ' of ' + list.length + ' tenants.';
+  showToast(msg, failed ? 'warning' : 'success');
 }

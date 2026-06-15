@@ -31,6 +31,7 @@
     <input type="text" id="tenantSearch" placeholder="Search name, email..." class="cmd-yard-select" style="min-width:220px;">
     <button class="cmd-btn" id="exportTenantsBtn"><i class="fas fa-download"></i> Export CSV</button>
     <button class="cmd-btn" id="importTenantsBtn"><i class="fas fa-file-import"></i> Import</button>
+    <button class="cmd-btn" id="bulkPeriodBtn" style="background:#8b5cf6;color:#fff;border-color:#8b5cf6;"><i class="fas fa-calendar-alt"></i> Bulk Update Period</button>
     <button class="cmd-btn" id="broadcastBtn" style="background:#0f1e3c;color:#fff;border-color:#0f1e3c;"><i class="fas fa-bullhorn"></i> Broadcast</button>
     <button class="cmd-btn" id="walkInBtn" style="background:var(--teal);color:#fff;border-color:var(--teal);"><i class="fas fa-bolt"></i> Walk-In</button>
     <button class="cmd-btn primary" id="addTenantBtn"><i class="fas fa-user-plus"></i> Add Tenant</button>
@@ -632,6 +633,56 @@
         <button type="submit" class="btn btn-primary" style="background:var(--teal);border-color:var(--teal);min-width:130px;"><i class="fas fa-bolt"></i> Check In Now</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ── Bulk Update Period Modal ─────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="bulkPeriodModal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header" style="background:#8b5cf6;border-radius:10px 10px 0 0;padding:16px 20px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas fa-calendar-alt" style="color:#fff;font-size:1rem;"></i>
+        </div>
+        <div>
+          <h3 class="modal-title" style="color:#fff;margin:0;font-size:1rem;">Bulk Update Lease Period</h3>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.75rem;margin-top:1px;">Set Start &amp; End Date for multiple tenants at once</div>
+        </div>
+      </div>
+      <button class="modal-close" id="closeBulkPeriodModal" style="color:#fff;opacity:0.85;"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:20px 24px;">
+
+      <!-- Recipients -->
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:10px;">Apply To</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;" id="bulkPeriodRecipientBtns">
+        <button type="button" class="bulkp-filter-btn active" data-filter="active" style="padding:6px 14px;border-radius:99px;border:1.5px solid #8b5cf6;background:#8b5cf6;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <i class="fas fa-check-circle" style="margin-right:4px;"></i>Active Tenants
+        </button>
+        <button type="button" class="bulkp-filter-btn" data-filter="all" style="padding:6px 14px;border-radius:99px;border:1.5px solid var(--gray-200);background:#fff;color:var(--gray-500);font-size:0.8rem;font-weight:600;cursor:pointer;">
+          <i class="fas fa-users" style="margin-right:4px;"></i>All Tenants
+        </button>
+      </div>
+      <div id="bulkPeriodPreview" style="font-size:0.8rem;color:var(--gray-500);padding:8px 12px;background:var(--gray-50);border-radius:6px;margin-bottom:16px;"></div>
+
+      <!-- Dates -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label>Start Date *</label>
+          <input type="date" id="bulkPeriodStart" required>
+        </div>
+        <div class="form-group">
+          <label>End Date *</label>
+          <input type="date" id="bulkPeriodEnd" required>
+        </div>
+      </div>
+      <div style="font-size:0.72rem;color:var(--gray-400);margin-top:4px;margin-bottom:16px;">This overwrites the Start Date and End Date on every matching tenant — useful for rolling everyone over to a new month in one click instead of editing each tenant.</div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn btn-secondary" id="cancelBulkPeriodModal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="applyBulkPeriodBtn" style="background:#8b5cf6;border-color:#8b5cf6;min-width:120px;"><i class="fas fa-check"></i> Apply</button>
+      </div>
+    </div>
   </div>
 </div>
 
