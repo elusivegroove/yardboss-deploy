@@ -249,6 +249,10 @@
         ? '<div class="dev-item-notes"><i class="fas fa-sticky-note" style="margin-right:5px;opacity:0.5;"></i>' + escHtml(item.notes) + '</div>'
         : '';
 
+      var resolutionHtml = item.resolution
+        ? '<div class="dev-item-resolution"><i class="fas fa-check-circle" style="margin-right:5px;"></i><strong>Resolution:</strong> ' + escHtml(item.resolution) + '</div>'
+        : '';
+
       var betaBadge = item.source === 'beta'
         ? '<span class="dev-priority-badge" style="color:#0ea5e9;" title="Submitted via beta feedback"><i class="fas fa-user-friends"></i> BETA</span>'
         : '';
@@ -268,6 +272,7 @@
         + '<div class="dev-item-title' + (isDone ? ' done-text' : '') + '">' + escHtml(item.title) + '</div>'
         + descHtml
         + notesHtml
+        + resolutionHtml
         + tagsHtml
         + '</div>'
 
@@ -352,6 +357,7 @@
     document.getElementById('devDescription').value = item.description || '';
     document.getElementById('devTags').value = (item.tags || []).join(', ');
     document.getElementById('devNotes').value = item.notes || '';
+    document.getElementById('devResolution').value = item.resolution || '';
     document.getElementById('devModal').classList.add('open');
     document.getElementById('devTitle').focus();
   }
@@ -377,7 +383,8 @@
       status: document.getElementById('devStatus').value,
       description: document.getElementById('devDescription').value.trim() || null,
       tags: tags,
-      notes: document.getElementById('devNotes').value.trim() || null
+      notes: document.getElementById('devNotes').value.trim() || null,
+      resolution: document.getElementById('devResolution').value.trim() || null
     };
 
     if (editingId) {
@@ -417,10 +424,10 @@
     var items = getFilteredItems();
     if (!items.length) { showToast('No items to export.', 'error'); return; }
     exportToCSV(
-      ['ID', 'Title', 'Type', 'Priority', 'Status', 'Description', 'Tags', 'Notes', 'Created', 'Updated'],
+      ['ID', 'Title', 'Type', 'Priority', 'Status', 'Description', 'Tags', 'Notes', 'Resolution', 'Created', 'Updated'],
       items.map(function (i) {
         return [i.id, i.title, i.type, i.priority, i.status,
-          i.description || '', (i.tags || []).join('; '), i.notes || '',
+          i.description || '', (i.tags || []).join('; '), i.notes || '', i.resolution || '',
           i.createdAt, i.updatedAt];
       }),
       'yardboss-dev-tracker.csv'

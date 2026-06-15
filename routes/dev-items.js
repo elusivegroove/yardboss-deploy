@@ -21,6 +21,7 @@ function rowToItem(row) {
     description: row.description,
     tags: row.tags || [],
     notes: row.notes,
+    resolution: row.resolution,
     source: row.source || 'admin',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -57,6 +58,7 @@ router.post('/', async (req, res) => {
       description: b.description || null,
       tags: b.tags || [],
       notes: b.notes || null,
+      resolution: b.resolution || null,
       source: b.source || 'admin',
       createdAt: b.createdAt || now,
       updatedAt: b.updatedAt || now,
@@ -64,13 +66,13 @@ router.post('/', async (req, res) => {
 
     if (process.env.DATABASE_URL) {
       await db.query(
-        `INSERT INTO dev_items (id, title, type, priority, status, description, tags, notes, source, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        `INSERT INTO dev_items (id, title, type, priority, status, description, tags, notes, resolution, source, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
          ON CONFLICT (id) DO UPDATE SET
            title = $2, type = $3, priority = $4, status = $5, description = $6,
-           tags = $7, notes = $8, source = $9, updated_at = $11`,
+           tags = $7, notes = $8, resolution = $9, source = $10, updated_at = $12`,
         [item.id, item.title, item.type, item.priority, item.status, item.description,
-         JSON.stringify(item.tags), item.notes, item.source, item.createdAt, item.updatedAt]
+         JSON.stringify(item.tags), item.notes, item.resolution, item.source, item.createdAt, item.updatedAt]
       );
     } else {
       storeDevItems.push(item);
@@ -96,9 +98,9 @@ router.patch('/:id', async (req, res) => {
       const merged = Object.assign(rowToItem(existing.rows[0]), updates);
       await db.query(
         `UPDATE dev_items SET title = $1, type = $2, priority = $3, status = $4,
-           description = $5, tags = $6, notes = $7, updated_at = $8 WHERE id = $9`,
+           description = $5, tags = $6, notes = $7, resolution = $8, updated_at = $9 WHERE id = $10`,
         [merged.title, merged.type, merged.priority, merged.status, merged.description,
-         JSON.stringify(merged.tags || []), merged.notes, merged.updatedAt, req.params.id]
+         JSON.stringify(merged.tags || []), merged.notes, merged.resolution, merged.updatedAt, req.params.id]
       );
       return res.json(merged);
     }

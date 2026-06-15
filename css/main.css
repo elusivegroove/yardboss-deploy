@@ -399,10 +399,6 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 .quick-glance-row .qv { font-weight: 600; color: var(--navy); }
 
 /* ===== SETTINGS PAGE ===== */
-.billing-info { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; padding: 14px; background: var(--gray-50); border-radius: var(--radius-sm); }
-.plan-badge { background: var(--navy); color: var(--teal); padding: 6px 14px; border-radius: 99px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
-.plan-price { font-size: 1.5rem; font-weight: 800; color: var(--navy); }
-.plan-cycle { font-size: 0.75rem; color: var(--gray-400); margin-top: 2px; }
 .api-key-row { display: flex; align-items: center; gap: 10px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 12px; font-family: monospace; font-size: 0.85rem; }
 .key-text { flex: 1; word-break: break-all; }
 
@@ -555,7 +551,6 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 [data-theme="dark"] .notif-row-info h4,
 [data-theme="dark"] .section-hdr h3,
 [data-theme="dark"] .quick-glance-row .qv,
-[data-theme="dark"] .plan-price,
 [data-theme="dark"] .payment-amount,
 [data-theme="dark"] .page-header h2,
 [data-theme="dark"] .page-greeting h2,
@@ -572,7 +567,6 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 [data-theme="midnight"] .notif-row-info h4,
 [data-theme="midnight"] .section-hdr h3,
 [data-theme="midnight"] .quick-glance-row .qv,
-[data-theme="midnight"] .plan-price,
 [data-theme="midnight"] .payment-amount,
 [data-theme="midnight"] .page-header h2,
 [data-theme="midnight"] .page-greeting h2,

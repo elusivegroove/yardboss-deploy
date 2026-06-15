@@ -23,6 +23,9 @@ async function runMigrations() {
     )
   `);
 
+  // ── Resolution summary (filled in when an item is marked Done) ───────────
+  await db.query(`ALTER TABLE dev_items ADD COLUMN IF NOT EXISTS resolution TEXT`);
+
   // ── Create branding table (Settings → Branding — logo + primary color) ────
   await db.query(`
     CREATE TABLE IF NOT EXISTS branding (
