@@ -144,6 +144,20 @@ if (process.env.DATABASE_URL) {
   }
 }
 
+// Late Fee Charges — 8:00 AM America/New_York, 6th of every month.
+if (process.env.DATABASE_URL) {
+  try {
+    const cron = require('node-cron');
+    const { runLateFeeCharges } = require('./scripts/late-fee-charges');
+    cron.schedule('0 8 6 * *', () => {
+      runLateFeeCharges().catch(err => console.error('[late-fee-charges] Error:', err));
+    }, { timezone: 'America/New_York' });
+    console.log('[Schedule] Late Fee Charges — 8:00 AM America/New_York, 6th of month');
+  } catch (err) {
+    console.error('[Schedule] Late Fee Charges not scheduled:', err.message);
+  }
+}
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   const banner = IS_SANDBOX

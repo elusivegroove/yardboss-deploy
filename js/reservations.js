@@ -161,6 +161,21 @@ function openTenantPanel(tenantId) {
   }
   lockBtn.onclick = function(){ togglePriceLock(tenantId); };
 
+  // Late Fee Exemption toggle
+  var lateFeeBtn = document.getElementById('panelLateFeeExemptBtn');
+  if (tenant.lateFeeExempt) {
+    lateFeeBtn.innerHTML = '<i class="fas fa-toggle-on"></i> Exempt';
+    lateFeeBtn.style.background = 'var(--navy)';
+    lateFeeBtn.style.borderColor = 'var(--navy)';
+    lateFeeBtn.style.color = '#fff';
+  } else {
+    lateFeeBtn.innerHTML = '<i class="fas fa-toggle-off"></i> Applies';
+    lateFeeBtn.style.background = '';
+    lateFeeBtn.style.borderColor = '';
+    lateFeeBtn.style.color = '';
+  }
+  lateFeeBtn.onclick = function(){ toggleLateFeeExempt(tenantId); };
+
   // Move-Out section
   var moveOutSection = document.getElementById('panelMoveOutSection');
   var moveOutContent = document.getElementById('panelMoveOutContent');
@@ -351,6 +366,22 @@ async function togglePriceLock(tenantId) {
     showToast('Rate '+(newVal?'locked':'unlocked')+' (offline)', 'warning');
   }
   renderTenantsTable();
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+// ── Late Fee Exemption ────────────────────────────────────────────────────
+async function toggleLateFeeExempt(tenantId) {
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  var newVal = !tenant.lateFeeExempt;
+  try {
+    await YB.saveTenant({ id: tenantId, lateFeeExempt: newVal });
+    tenant.lateFeeExempt = newVal;
+    showToast(newVal ? tenant.name+' is now exempt from late fees' : 'Late fees re-enabled for '+tenant.name, 'success');
+  } catch (err) {
+    tenant.lateFeeExempt = newVal;
+    showToast('Late fee setting '+(newVal?'exempted':'re-enabled')+' (offline)', 'warning');
+  }
   if (_panelTenantId === tenantId) openTenantPanel(tenantId);
 }
 
