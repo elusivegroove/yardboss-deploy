@@ -11,7 +11,7 @@ var YardBossReceipts = (function() {
     address: '7406 HWY 27 North',
     city: 'Sebring, FL 33870',
     phone: '(863) 441-3444',
-    email: 'toby@transvegalogistics.com'
+    email: 'sebring@transvegatruckcenter.com'
   };
 
   function padLeft(n, len) {
@@ -57,9 +57,9 @@ var YardBossReceipts = (function() {
       '<style>' +
       'body{font-family:Inter,Arial,sans-serif;color:#1e293b;margin:0;padding:0;background:#f8fafc;}' +
       '.receipt{max-width:600px;margin:32px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);}' +
-      '.receipt-header{background:#0f1e3c;color:#fff;padding:28px 32px;}' +
+      '.receipt-header{background:#0f1e3c;color:#fff;padding:24px 32px;}' +
       '.receipt-header .logo{margin-bottom:8px;}' +
-      '.receipt-header .logo img{height:42px;border-radius:6px;display:block;}' +
+      '.receipt-header .logo img{height:64px;border-radius:6px;display:block;background:#fff;padding:4px;}' +
       '.receipt-header .sub{font-size:0.78rem;color:rgba(255,255,255,0.6);margin-top:2px;}' +
       '.receipt-meta{display:flex;justify-content:space-between;padding:18px 32px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:0.82rem;}' +
       '.receipt-meta .label{color:#64748b;margin-bottom:2px;}' +
@@ -81,7 +81,7 @@ var YardBossReceipts = (function() {
       '</style></head><body>' +
       '<div class="receipt">' +
       '<div class="receipt-header">' +
-      '<div class="logo"><img src="https://yardboss-deploy.vercel.app/images/yardboss-logo.png" alt="YardBoss"></div>' +
+      '<div class="logo"><img src="https://yardboss-deploy.vercel.app/images/transvega-logo.png" alt="TransVega RV and Truck Center"></div>' +
       '<div class="sub">' + OWNER.business + ' &nbsp;|&nbsp; ' + OWNER.address + ', ' + OWNER.city + '</div>' +
       '<div class="sub">' + OWNER.phone + ' &nbsp;|&nbsp; ' + OWNER.email + '</div>' +
       '</div>' +
@@ -119,7 +119,7 @@ var YardBossReceipts = (function() {
       '</div>' +
 
       '</div>' +
-      '<div class="receipt-footer">Thank you for your business — YardBoss by TransVega &nbsp;·&nbsp; ' + OWNER.phone + '</div>' +
+      '<div class="receipt-footer">Thank you for your business — TransVega RV and Truck Center &nbsp;·&nbsp; ' + OWNER.phone + ' &nbsp;·&nbsp; ' + OWNER.email + '</div>' +
       '</div>' +
       '</body></html>';
   }
