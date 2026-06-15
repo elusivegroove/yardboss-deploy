@@ -15,7 +15,7 @@ function getFilteredTenants() {
     var q = currentSearch.toLowerCase();
     list = list.filter(function(t){
       return t.name.toLowerCase().includes(q)
-        || t.email.toLowerCase().includes(q)
+        || (t.email && t.email.toLowerCase().includes(q))
         || t.company.toLowerCase().includes(q)
         || (t.phone && t.phone.includes(q));
     });
@@ -75,7 +75,7 @@ function renderTenantsTable() {
       +'<div><div style="font-weight:600;color:var(--navy);">'+t.name+walkInBadge+'</div><div style="font-size:0.75rem;color:var(--gray-400);">'+t.company+'</div></div>'
       +'</div></td>'
       +'<td>'+regBadge+'</td>'
-      +'<td style="font-size:0.82rem;"><a href="mailto:'+t.email+'" style="color:var(--teal);text-decoration:none;" onclick="event.stopPropagation()">'+t.email+'</a></td>'
+      +'<td style="font-size:0.82rem;">'+(t.email ? '<a href="mailto:'+t.email+'" style="color:var(--teal);text-decoration:none;" onclick="event.stopPropagation()">'+t.email+'</a>' : '<span style="color:var(--gray-400);">—</span>')+'</td>'
       +'<td style="font-size:0.82rem;white-space:nowrap;">'+t.phone+'</td>'
       +'<td style="font-size:0.82rem;">'+getLotName(t.lotId)+'</td>'
       +'<td>'+stBadge+'</td>'
@@ -701,7 +701,7 @@ function openMessageModal(tenantId) {
   var tenant = getTenant(tenantId);
   if (!tenant) return;
   document.getElementById('msgToName').textContent = tenant.name;
-  document.getElementById('msgToEmail').textContent = tenant.email;
+  document.getElementById('msgToEmail').textContent = tenant.email ? '<'+tenant.email+'>' : '(no email on file)';
   document.getElementById('msgSubject').value = '';
   document.getElementById('msgBody').value = '';
   document.getElementById('sendMsgBtn').dataset.tenantId = tenantId;
@@ -714,6 +714,7 @@ function sendMessage() {
   if (!subject || !body) { showToast('Please fill in subject and message.','error'); return; }
   var tenantId = document.getElementById('sendMsgBtn').dataset.tenantId;
   var tenant = getTenant(tenantId);
+  if (!tenant.email) { showToast('This tenant has no email on file.','error'); return; }
   showToast('Message sent to '+tenant.name+' ('+tenant.email+')','success');
   document.getElementById('msgModal').classList.remove('open');
 }
@@ -966,8 +967,8 @@ async function handleAddTenantSubmit(e) {
   var autopayCard     = paymentMethod === 'autopay' ? (document.getElementById('atAutopayCard').value.trim() || null) : null;
   var autopayNextDate = paymentMethod === 'autopay' ? (document.getElementById('atAutopayNextDate').value || null) : null;
 
-  if (!name || !email || !lotId || !space) {
-    showToast('Name, email, lot, and space are required.', 'error');
+  if (!name || !lotId || !space) {
+    showToast('Name, lot, and space are required.', 'error');
     return;
   }
 
