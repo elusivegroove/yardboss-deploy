@@ -99,6 +99,32 @@
       }).then(handleResponse);
     },
 
+    // ── Gate Code ─────────────────────────────────────────────────────────
+    loadGateCode: function () {
+      return fetch(BASE + '/api/gate-code').then(handleResponse);
+    },
+
+    saveGateCode: function (gateCode) {
+      return fetch(BASE + '/api/gate-code', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gateCode: gateCode })
+      }).then(handleResponse);
+    },
+
+    /**
+     * sendGateCodeEmail({ to, tenantName, welcome })
+     * Emails the current gate code to a tenant (used after a payment is
+     * recorded so they always have the latest monthly code).
+     */
+    sendGateCodeEmail: function (opts) {
+      return fetch(BASE + '/api/gate-code/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(opts || {})
+      }).then(handleResponse);
+    },
+
   };
 
   window.YB = YB;

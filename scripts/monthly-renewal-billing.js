@@ -19,6 +19,7 @@
 
 const db = require('../db');
 const { MOCK_SMTP, transporter, buildEmailHtml } = require('../lib/email');
+const { getGateCode, gateCodeEmailBody } = require('../lib/gate-code');
 
 const MOCK_PAYMENTS = process.env.MOCK_PAYMENTS === 'true';
 const RECIPIENTS = ['accounting1@transvegalogistics.com', 'sam.f@transvegalogistics.com'];
@@ -50,7 +51,16 @@ async function chargeAutopayTenant(tenant, amount, periodLabel) {
   return { success: false, mock: false, error: 'No payment method on file for auto-pay' };
 }
 
-function chargedEmailBody(tenant, baseAmount, surcharge, totalAmount, periodLabel, billingDateStr) {
+function chargedEmailBody(tenant, baseAmount, surcharge, totalAmount, periodLabel, billingDateStr, gateCode) {
+  const gateSection = gateCode ? `
+<div style="text-align:center;margin:20px 0;">
+  <div style="display:inline-block;background:#f8fafc;border:2px dashed #00b4a0;border-radius:10px;padding:14px 32px;">
+    <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:4px;">Gate Code — ${periodLabel}</div>
+    <div style="font-size:1.8rem;font-weight:800;color:#0f1e3c;letter-spacing:3px;">${gateCode}</div>
+  </div>
+</div>
+<p style="font-size:0.85rem;color:#64748b;">This code is valid for entry through the end of ${periodLabel} and changes monthly.</p>` : '';
+
   return `<h2 style="margin-top:0;color:#0f1e3c;">Payment Confirmation</h2>
 <p>Hi ${tenant.name},</p>
 <p>This is a confirmation that the card on file for your auto-pay account was charged <strong>${formatCurrency(totalAmount)}</strong> on ${billingDateStr} for your ${periodLabel} rent — Space #${tenant.spaceNumber}.</p>
@@ -59,6 +69,7 @@ function chargedEmailBody(tenant, baseAmount, surcharge, totalAmount, periodLabe
   <tr><td style="padding:4px 0;color:#334155;">Card Processing Fee (${(CARD_SURCHARGE_RATE*100).toFixed(1)}%)</td><td style="padding:4px 0;text-align:right;color:#334155;">${formatCurrency(surcharge)}</td></tr>
   <tr style="border-top:1px solid #e2e8f0;font-weight:700;"><td style="padding:6px 0;color:#0f1e3c;">Total Charged</td><td style="padding:6px 0;text-align:right;color:#0f1e3c;">${formatCurrency(totalAmount)}</td></tr>
 </table>
+${gateSection}
 <p>Thank you for being a valued tenant at TransVega RV &amp; Truck Center!</p>`;
 }
 
@@ -110,6 +121,7 @@ async function runMonthlyRenewalBilling() {
   const now = new Date();
   const periodLabel = periodLabelFor(now);
   const billingDateStr = now.toISOString().split('T')[0];
+  const { gateCode } = await getGateCode();
 
   const summary = { charged: [], due: [], skippedNoEmail: [], skippedNoAmount: [], surchargeTotal: 0 };
 
@@ -133,7 +145,7 @@ async function runMonthlyRenewalBilling() {
       if (chargeResult.success) {
         payments.push({ date: billingDateStr, amount: totalAmount, baseAmount: amount, cardSurcharge: surcharge, type: 'payment', status: 'paid', method: 'autopay', note: `Auto-pay — ${periodLabel} rent (${formatCurrency(amount)} + ${formatCurrency(surcharge)} card surcharge)` });
         subject = 'Payment Confirmation — TransVega RV & Truck Center';
-        html = buildEmailHtml('YardBoss', chargedEmailBody(tenant, amount, surcharge, totalAmount, periodLabel, billingDateStr));
+        html = buildEmailHtml('YardBoss', chargedEmailBody(tenant, amount, surcharge, totalAmount, periodLabel, billingDateStr, gateCode));
         summary.surchargeTotal += surcharge;
       } else {
         payments.push({ date: billingDateStr, amount, type: 'charge', description: `${periodLabel} rent (auto-pay failed)` });

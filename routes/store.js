@@ -74,4 +74,10 @@ const branding = {
   primaryColor: null,
 };
 
-module.exports = { lots, reservations, genResId, devItems, genDevItemId, branding };
+// In-memory app settings (Gate Code) — used when DATABASE_URL is not set (local dev)
+const appSettings = {
+  gateCode: null,
+  gateCodeUpdatedAt: null,
+};
+
+module.exports = { lots, reservations, genResId, devItems, genDevItemId, branding, appSettings };

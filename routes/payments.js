@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { reservations } = require('./store');
+const { MOCK_SMTP, transporter, buildEmailHtml } = require('../lib/email');
+const { getGateCode, currentPeriodLabel, gateCodeEmailBody } = require('../lib/gate-code');
 
 const MOCK = process.env.MOCK_PAYMENTS === 'true';
 const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -83,6 +85,12 @@ router.post('/confirm', async (req, res) => {
       paymentStatus: 'current',
       stripePaymentIntentId: paymentIntentId,
       activatedAt: new Date().toISOString(),
+    });
+
+    // Email the current gate code to the new tenant now that their booking
+    // and first payment are confirmed (Settings → Gate Code).
+    sendGateCodeWelcomeEmail(reservations[idx]).catch(err => {
+      console.error('[payments/confirm] gate code email error:', err.message);
     });
 
     res.json({ success: true, reservation: reservations[idx] });
@@ -211,6 +219,38 @@ router.post('/process-autopay', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Sends a welcome email with the current gate code to a newly-confirmed reservation.
+// No-op (logged) if no gate code has been set yet, or the reservation has no email.
+async function sendGateCodeWelcomeEmail(reservation) {
+  if (!reservation || !reservation.email) return;
+
+  const { gateCode } = await getGateCode();
+  if (!gateCode) {
+    console.log('[payments/confirm] No gate code set (Settings → Gate Code) — skipping gate code email for', reservation.email);
+    return;
+  }
+
+  const periodLabel = currentPeriodLabel();
+  const subject = `Booking Confirmed — Your Gate Code (${periodLabel})`;
+  const html = buildEmailHtml('YardBoss', gateCodeEmailBody(reservation.tenantName || 'there', gateCode, periodLabel, { welcome: true }));
+
+  if (MOCK_SMTP || !transporter) {
+    console.log('\n[GATE CODE EMAIL MOCK] ─────────────────────────────');
+    console.log(`  To:      ${reservation.email} (${reservation.tenantName || ''})`);
+    console.log(`  Subject: ${subject}`);
+    console.log(`  Code:    ${gateCode}`);
+    console.log('───────────────────────────────────────────────────\n');
+    return;
+  }
+
+  await transporter.sendMail({
+    from: `"YardBoss — TransVega" <${process.env.SMTP_USER}>`,
+    to: reservation.email,
+    subject,
+    html,
+  });
+}
 
 // ─── GET /api/payments/status ─────────────────────────────────────────────────
 router.get('/status', (req, res) => {

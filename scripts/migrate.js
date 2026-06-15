@@ -32,6 +32,15 @@ async function runMigrations() {
     )
   `);
 
+  // ── Create app_settings table (Settings → Gate Code) ─────────────────────
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      id                   INT PRIMARY KEY DEFAULT 1,
+      gate_code            TEXT,
+      gate_code_updated_at TIMESTAMPTZ
+    )
+  `);
+
   // ── Create lots table ─────────────────────────────────────────────────────
   await db.query(`
     CREATE TABLE IF NOT EXISTS lots (

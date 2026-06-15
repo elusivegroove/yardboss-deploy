@@ -21,7 +21,7 @@ const surcharge = calcSurcharge(baseAmount);
 const totalAmount = Math.round((baseAmount + surcharge) * 100) / 100;
 
 const autopayHtml = buildEmailHtml('YardBoss', chargedEmailBody(
-  { name: 'John Smith', spaceNumber: '14' }, baseAmount, surcharge, totalAmount, periodLabel, billingDateStr
+  { name: 'John Smith', spaceNumber: '14' }, baseAmount, surcharge, totalAmount, periodLabel, billingDateStr, '4471'
 ));
 const manualHtml = buildEmailHtml('YardBoss', dueEmailBody(
   { name: 'Jane Doe', spaceNumber: '22' }, 450, periodLabel, null

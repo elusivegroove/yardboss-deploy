@@ -128,6 +128,30 @@
       </form>
     </div>
 
+    <!-- Gate Code -->
+    <div class="card">
+      <div class="card-header-row">
+        <div>
+          <h3 style="margin-bottom:2px;">Gate Code</h3>
+          <p style="font-size:0.8rem;color:var(--gray-500)">Set this month's gate code once here — YardBoss automatically emails it to clients when they book on the portal or make a payment, until you change it.</p>
+        </div>
+        <i class="fas fa-key" style="font-size:1.2rem;color:var(--teal)"></i>
+      </div>
+      <form id="gateCodeForm">
+        <div class="settings-grid">
+          <div class="form-group">
+            <label>Current Gate Code</label>
+            <input type="text" id="gateCodeInput" placeholder="e.g. 4471" style="font-family:monospace;font-size:1.1rem;letter-spacing:2px;font-weight:700;">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:16px;">
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Gate Code</button>
+          <span id="gateCodeSavedMsg" style="display:none"></span>
+          <span id="gateCodeUpdatedAt" style="font-size:0.78rem;color:var(--gray-500);"></span>
+        </div>
+      </form>
+    </div>
+
     <!-- Pricing Plans -->
     <div class="card">
       <div class="card-header-row">
@@ -358,6 +382,7 @@
 </div>
 
 <script src="js/data.js"></script>
+<script src="js/api.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/webhooks.js"></script>

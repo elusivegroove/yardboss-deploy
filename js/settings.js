@@ -53,10 +53,28 @@ function prefillBranding() {
   }).catch(function () {});
 }
 
+function formatGateCodeUpdatedAt(updatedAt) {
+  if (!updatedAt) return '';
+  var d = new Date(updatedAt);
+  return 'Last updated ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
+    ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function prefillGateCode() {
+  if (!window.YB || typeof YB.loadGateCode !== 'function') return;
+  YB.loadGateCode().then(function (g) {
+    var input = document.getElementById('gateCodeInput');
+    var updatedEl = document.getElementById('gateCodeUpdatedAt');
+    if (input) input.value = g.gateCode || '';
+    if (updatedEl) updatedEl.textContent = formatGateCodeUpdatedAt(g.updatedAt);
+  }).catch(function () {});
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   prefillProfile();
   prefillPricing();
   prefillBranding();
+  prefillGateCode();
 
   // ── Branding ───────────────────────────────────────────────
   var logoInput = document.getElementById('brandingLogoInput');
@@ -124,6 +142,25 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
   });
+
+  const gateCodeForm = document.getElementById('gateCodeForm');
+  if (gateCodeForm) {
+    gateCodeForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var code = document.getElementById('gateCodeInput').value.trim();
+      if (!code) { showSavedMessage('gateCodeSavedMsg', 'Enter a gate code first.', 2500); return; }
+      if (window.YB && typeof YB.saveGateCode === 'function') {
+        YB.saveGateCode(code).then(function (g) {
+          var updatedEl = document.getElementById('gateCodeUpdatedAt');
+          if (updatedEl) updatedEl.textContent = formatGateCodeUpdatedAt(g.updatedAt);
+          showSavedMessage('gateCodeSavedMsg', 'Gate code saved!', 2500);
+        }).catch(function (err) {
+          console.error('Could not save gate code:', err);
+          showSavedMessage('gateCodeSavedMsg', 'Could not save gate code.', 3500);
+        });
+      }
+    });
+  }
 
   const profileForm = document.getElementById('profileForm');
   if (profileForm) {

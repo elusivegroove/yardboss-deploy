@@ -512,6 +512,19 @@ function fmtUSD2(n) {
   return '$' + Number(n || 0).toFixed(2);
 }
 
+// Emails the current month's gate code (Settings → Gate Code) to a tenant
+// after a payment is recorded, so they always have the latest code. Silent
+// no-op if the tenant has no email on file or no gate code has been set.
+function sendGateCodeEmail(tenant, opts) {
+  if (!tenant || !tenant.email) return;
+  if (!window.YB || typeof YB.sendGateCodeEmail !== 'function') return;
+  var payload = { to: tenant.email, tenantName: tenant.name };
+  if (opts && opts.welcome) payload.welcome = true;
+  YB.sendGateCodeEmail(payload).catch(function (err) {
+    console.warn('Could not send gate code email:', err && err.message);
+  });
+}
+
 // Shows/hides a "total to charge" hint when the selected payment method is
 // "Card" — the 3.5% card processing surcharge is added on top of the entered
 // amount for ANY card payment (walk-in, manual ledger entry, or auto-pay).
@@ -600,6 +613,7 @@ async function handleLedgerEntrySubmit(e) {
       amount: amount,
       date: date
     });
+    sendGateCodeEmail(tenant);
   }
 
   document.getElementById('ledgerEntryModal').classList.remove('open');
@@ -761,6 +775,7 @@ function runAutoPay(tenantId) {
     };
     tenant.payments.unshift(payment);
     showToast(res.mock ? 'Auto-pay processed (mock mode) — ' + fmtUSD2(amount) + ' (incl. 3.5% card fee)' : 'Auto-pay of '+fmtUSD2(amount)+' processed (incl. 3.5% card fee)', 'success');
+    sendGateCodeEmail(tenant);
     openTenantPanel(tenantId); // refresh panel
   })
   .catch(function(e) { showToast('Auto-pay failed: '+e.message, 'error'); })
@@ -1183,6 +1198,10 @@ async function handleWalkInSubmit(e) {
     name: name, email: email, company: company,
     lotId: lotId, spaceNumber: space, monthlyRate: rate, walkIn: true
   });
+
+  if (payments.length) {
+    sendGateCodeEmail({ name: name, email: email }, { welcome: true });
+  }
 
   document.getElementById('walkInModal').classList.remove('open');
   updateTabCounts();
