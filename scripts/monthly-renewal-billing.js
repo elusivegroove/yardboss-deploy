@@ -183,7 +183,7 @@ async function runMonthlyRenewalBilling() {
   return summary;
 }
 
-module.exports = { runMonthlyRenewalBilling };
+module.exports = { runMonthlyRenewalBilling, chargedEmailBody, dueEmailBody, calcSurcharge, periodLabelFor };
 
 // Allow running directly: node scripts/monthly-renewal-billing.js
 if (require.main === module) {

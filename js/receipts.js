@@ -57,10 +57,10 @@ var YardBossReceipts = (function() {
       '<style>' +
       'body{font-family:Inter,Arial,sans-serif;color:#1e293b;margin:0;padding:0;background:#f8fafc;}' +
       '.receipt{max-width:600px;margin:32px auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);}' +
-      '.receipt-header{background:#0f1e3c;color:#fff;padding:24px 32px;}' +
-      '.receipt-header .logo{margin-bottom:8px;}' +
-      '.receipt-header .logo img{height:64px;border-radius:6px;display:block;background:#fff;padding:4px;}' +
-      '.receipt-header .sub{font-size:0.78rem;color:rgba(255,255,255,0.6);margin-top:2px;}' +
+      '.receipt-header{background:#0f1e3c;color:#fff;padding:24px 32px;text-align:center;}' +
+      '.receipt-header .logo{margin-bottom:10px;}' +
+      '.receipt-header .logo img{height:120px;border-radius:8px;display:block;margin:0 auto;background:#fff;padding:8px;}' +
+      '.receipt-header .sub{font-size:0.8rem;color:rgba(255,255,255,0.75);margin-top:2px;}' +
       '.receipt-meta{display:flex;justify-content:space-between;padding:18px 32px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:0.82rem;}' +
       '.receipt-meta .label{color:#64748b;margin-bottom:2px;}' +
       '.receipt-meta .val{font-weight:700;color:#0f1e3c;}' +
@@ -76,7 +76,7 @@ var YardBossReceipts = (function() {
       '.line-item.total{background:#f8fafc;font-weight:800;font-size:0.95rem;color:#0f1e3c;}' +
       '.badge-paid{display:inline-block;background:#d1fae5;color:#065f46;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:0.5px;}' +
       '.badge-overdue{display:inline-block;background:#fee2e2;color:#991b1b;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:0.5px;}' +
-      '.receipt-footer{text-align:center;padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:0.78rem;color:#94a3b8;}' +
+      '.receipt-footer{text-align:center;padding:20px 32px;background:#0f1e3c;border-top:1px solid rgba(255,255,255,0.1);font-size:0.78rem;color:#cbd5e1;}' +
       '@media print{body{background:#fff;}.receipt{box-shadow:none;border:none;margin:0;border-radius:0;}}' +
       '</style></head><body>' +
       '<div class="receipt">' +
