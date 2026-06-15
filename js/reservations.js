@@ -1445,7 +1445,11 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Broadcast SMS toggle — show/hide segment counter
   document.getElementById('bcastSMS').addEventListener('change', function() {
     document.getElementById('bcastSMSNote').style.display = this.checked ? 'inline' : 'none';
+    updateBroadcastPreview();
   });
+
+  // Broadcast test phone — refresh preview as it's typed
+  document.getElementById('bcastTestPhone').addEventListener('input', updateBroadcastPreview);
 
   // Broadcast subject row visible only when email checked
   document.getElementById('bcastEmail').addEventListener('change', function() {
@@ -1499,8 +1503,12 @@ function updateBroadcastPreview() {
   var withEmail = list.filter(function(t){ return t.email; }).length;
   var withSMSConsent = list.filter(function(t){ return t.phone && t.smsConsent; }).length;
   var el = document.getElementById('broadcastRecipientPreview');
-  el.innerHTML = '<strong style="color:var(--navy);">'+list.length+' tenant'+(list.length!==1?'s':'')+' selected</strong>'
+  var html = '<strong style="color:var(--navy);">'+list.length+' tenant'+(list.length!==1?'s':'')+' selected</strong>'
     +' &nbsp;·&nbsp; '+withEmail+' with email &nbsp;·&nbsp; '+withSMSConsent+' opted in for SMS';
+  var testPhone = document.getElementById('bcastTestPhone').value.trim();
+  var viaSMS = document.getElementById('bcastSMS').checked;
+  if (testPhone && viaSMS) html += ' &nbsp;·&nbsp; + 1 test number';
+  el.innerHTML = html;
 }
 
 function openBroadcastModal() {
@@ -1510,6 +1518,7 @@ function openBroadcastModal() {
   document.getElementById('bcastSMSSegments').textContent = '1';
   document.getElementById('bcastEmail').checked = true;
   document.getElementById('bcastSMS').checked = false;
+  document.getElementById('bcastTestPhone').value = '';
   document.getElementById('bcastSMSNote').style.display = 'none';
   document.getElementById('bcastSubjectRow').style.display = '';
   // Reset filter pills to Active
@@ -1533,7 +1542,8 @@ function sendBroadcast() {
   if (viaEmail && !subject) { showToast('Please enter a subject for the email.', 'error'); return; }
 
   var list = getBroadcastRecipients();
-  if (!list.length) { showToast('No tenants match that filter.', 'error'); return; }
+  var testPhone = document.getElementById('bcastTestPhone').value.trim();
+  if (!list.length && !testPhone) { showToast('No tenants match that filter.', 'error'); return; }
 
   var channels = [];
   if (viaEmail) channels.push('email');
@@ -1542,6 +1552,10 @@ function sendBroadcast() {
   var tenants = list.map(function(t) {
     return { name: t.name, email: t.email || '', phone: (t.smsConsent ? (t.phone || '') : '') };
   });
+
+  if (testPhone && viaSMS) {
+    tenants.push({ name: 'Test', email: '', phone: testPhone });
+  }
 
   var btn = document.getElementById('sendBroadcastBtn');
   btn.disabled = true;
