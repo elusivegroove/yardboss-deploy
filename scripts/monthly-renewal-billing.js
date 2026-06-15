@@ -23,8 +23,15 @@ const { MOCK_SMTP, transporter, buildEmailHtml } = require('../lib/email');
 const MOCK_PAYMENTS = process.env.MOCK_PAYMENTS === 'true';
 const RECIPIENTS = ['accounting1@transvegalogistics.com', 'sam.f@transvegalogistics.com'];
 
+// Card processing surcharge applied to auto-pay (credit card on file) charges only.
+const CARD_SURCHARGE_RATE = 0.035;
+
 function formatCurrency(n) {
   return '$' + Number(n || 0).toFixed(2);
+}
+
+function calcSurcharge(amount) {
+  return Math.round(amount * CARD_SURCHARGE_RATE * 100) / 100;
 }
 
 function periodLabelFor(date) {
@@ -43,10 +50,15 @@ async function chargeAutopayTenant(tenant, amount, periodLabel) {
   return { success: false, mock: false, error: 'No payment method on file for auto-pay' };
 }
 
-function chargedEmailBody(tenant, amount, periodLabel, billingDateStr) {
+function chargedEmailBody(tenant, baseAmount, surcharge, totalAmount, periodLabel, billingDateStr) {
   return `<h2 style="margin-top:0;color:#0f1e3c;">Payment Confirmation</h2>
 <p>Hi ${tenant.name},</p>
-<p>This is a confirmation that the card on file for your auto-pay account was charged <strong>${formatCurrency(amount)}</strong> on ${billingDateStr} for your ${periodLabel} rent — Space #${tenant.spaceNumber}.</p>
+<p>This is a confirmation that the card on file for your auto-pay account was charged <strong>${formatCurrency(totalAmount)}</strong> on ${billingDateStr} for your ${periodLabel} rent — Space #${tenant.spaceNumber}.</p>
+<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:0.88rem;">
+  <tr><td style="padding:4px 0;color:#334155;">${periodLabel} Rent</td><td style="padding:4px 0;text-align:right;color:#334155;">${formatCurrency(baseAmount)}</td></tr>
+  <tr><td style="padding:4px 0;color:#334155;">Card Processing Fee (${(CARD_SURCHARGE_RATE*100).toFixed(1)}%)</td><td style="padding:4px 0;text-align:right;color:#334155;">${formatCurrency(surcharge)}</td></tr>
+  <tr style="border-top:1px solid #e2e8f0;font-weight:700;"><td style="padding:6px 0;color:#0f1e3c;">Total Charged</td><td style="padding:6px 0;text-align:right;color:#0f1e3c;">${formatCurrency(totalAmount)}</td></tr>
+</table>
 <p>Thank you for being a valued tenant at TransVega RV &amp; Truck Center!</p>`;
 }
 
@@ -83,6 +95,7 @@ function summaryEmailBody(summary, periodLabel) {
   return `<h2 style="margin-top:0;color:#0f1e3c;">Monthly Renewal Billing — ${periodLabel}</h2>
 <h3 style="color:#0f1e3c;border-bottom:2px solid #00b4a0;padding-bottom:4px;">Auto-Pay Charged (${summary.charged.length})</h3>
 ${list(summary.charged)}
+<p style="font-size:0.85rem;color:#334155;">Card processing surcharges collected (${(CARD_SURCHARGE_RATE*100).toFixed(1)}%): <strong>${formatCurrency(summary.surchargeTotal)}</strong></p>
 <h3 style="color:#0f1e3c;border-bottom:2px solid #00b4a0;padding-bottom:4px;">Payment Due Reminders Sent (${summary.due.length})</h3>
 ${list(summary.due)}
 <h3 style="color:#0f1e3c;border-bottom:2px solid #00b4a0;padding-bottom:4px;">No Email On File (${summary.skippedNoEmail.length})</h3>
@@ -98,7 +111,7 @@ async function runMonthlyRenewalBilling() {
   const periodLabel = periodLabelFor(now);
   const billingDateStr = now.toISOString().split('T')[0];
 
-  const summary = { charged: [], due: [], skippedNoEmail: [], skippedNoAmount: [] };
+  const summary = { charged: [], due: [], skippedNoEmail: [], skippedNoAmount: [], surchargeTotal: 0 };
 
   for (const row of result.rows) {
     if ((row.rate_type || 'monthly') !== 'monthly') continue;
@@ -114,11 +127,14 @@ async function runMonthlyRenewalBilling() {
     let html, subject, reason = null;
 
     if (row.payment_method === 'autopay') {
-      const chargeResult = await chargeAutopayTenant(tenant, amount, periodLabel);
+      const surcharge = calcSurcharge(amount);
+      const totalAmount = Math.round((amount + surcharge) * 100) / 100;
+      const chargeResult = await chargeAutopayTenant(tenant, totalAmount, periodLabel);
       if (chargeResult.success) {
-        payments.push({ date: billingDateStr, amount, type: 'payment', status: 'paid', method: 'autopay', note: `Auto-pay — ${periodLabel} rent` });
+        payments.push({ date: billingDateStr, amount: totalAmount, type: 'payment', status: 'paid', method: 'autopay', note: `Auto-pay — ${periodLabel} rent (${formatCurrency(amount)} + ${formatCurrency(surcharge)} card surcharge)` });
         subject = 'Payment Confirmation — TransVega RV & Truck Center';
-        html = buildEmailHtml('YardBoss', chargedEmailBody(tenant, amount, periodLabel, billingDateStr));
+        html = buildEmailHtml('YardBoss', chargedEmailBody(tenant, amount, surcharge, totalAmount, periodLabel, billingDateStr));
+        summary.surchargeTotal += surcharge;
       } else {
         payments.push({ date: billingDateStr, amount, type: 'charge', description: `${periodLabel} rent (auto-pay failed)` });
         reason = 'autopay_failed';
