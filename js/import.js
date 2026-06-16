@@ -26,11 +26,19 @@
   function excelDateToISO(val) {
     if (val === '' || val === null || val === undefined) return '';
     if (typeof val === 'string') {
-      // Already looks like a date string
       var cleaned = val.replace(/\\/g, '/').trim();
-      if (cleaned.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/)) {
-        var d2 = new Date(cleaned);
+      // 2-digit year: M/D/YY or MM/DD/YY → expand to 4-digit year
+      if (cleaned.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2}$/)) {
+        var parts = cleaned.split(/[\/\-]/);
+        var yr = parseInt(parts[2], 10);
+        yr = yr < 50 ? 2000 + yr : 1900 + yr;
+        var d2 = new Date(parseInt(parts[0], 10) + '/' + parseInt(parts[1], 10) + '/' + yr);
         if (!isNaN(d2.getTime())) return d2.toISOString().split('T')[0];
+      }
+      // 4-digit year: M/D/YYYY
+      if (cleaned.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}$/)) {
+        var d3 = new Date(cleaned);
+        if (!isNaN(d3.getTime())) return d3.toISOString().split('T')[0];
       }
       if (cleaned.match(/^\d{4}-\d{2}-\d{2}/)) return cleaned.slice(0, 10);
       return '';
@@ -272,6 +280,15 @@
     var term    = importColMap.term    !== undefined ? String(row[importColMap.term]    || '').trim() : '';
     var startDate = excelDateToISO(importColMap.startDate !== undefined ? row[importColMap.startDate] : '');
     var endDate   = excelDateToISO(importColMap.endDate   !== undefined ? row[importColMap.endDate]   : '');
+
+    // If no dedicated email column, scan all cells for an email-shaped value
+    if (!email) {
+      for (var ci = 0; ci < row.length; ci++) {
+        var cellStr = String(row[ci] || '').trim();
+        var emailMatch = cellStr.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+        if (emailMatch) { email = emailMatch[0]; break; }
+      }
+    }
 
     var spotRaw = importColMap.spot !== undefined ? row[importColMap.spot] : '';
     var spotNum = parseFloat(spotRaw);
