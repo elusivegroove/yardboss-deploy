@@ -261,89 +261,130 @@
     btn.disabled = withName === 0;
   }
 
-  // Execute the import
+  // Build a tenant payload from a spreadsheet row (no id = POST/create)
+  function buildTenantPayload(row, lotId) {
+    var name    = importColMap.name    !== undefined ? String(row[importColMap.name]    || '').trim() : '';
+    var email   = importColMap.email   !== undefined ? String(row[importColMap.email]   || '').trim() : '';
+    var phone   = formatPhone(importColMap.phone !== undefined ? row[importColMap.phone] : '');
+    var company = importColMap.company !== undefined ? String(row[importColMap.company] || '').trim() : '';
+    var plate   = importColMap.plate   !== undefined ? String(row[importColMap.plate]   || '').trim() : '';
+    var vehicle = importColMap.vehicle !== undefined ? String(row[importColMap.vehicle] || '').trim() : '';
+    var term    = importColMap.term    !== undefined ? String(row[importColMap.term]    || '').trim() : '';
+    var startDate = excelDateToISO(importColMap.startDate !== undefined ? row[importColMap.startDate] : '');
+    var endDate   = excelDateToISO(importColMap.endDate   !== undefined ? row[importColMap.endDate]   : '');
+
+    var spotRaw = importColMap.spot !== undefined ? row[importColMap.spot] : '';
+    var spotNum = parseFloat(spotRaw);
+    var spot = (!isNaN(spotNum) && spotNum > 0) ? String(Math.round(spotNum)) : String(spotRaw || '').trim();
+
+    var status = 'active';
+    var colBNote = String(row[1] || '').trim().toUpperCase();
+    if (colBNote === 'EMPTY') status = 'pending';
+    if (endDate && new Date(endDate) < new Date()) status = 'past';
+
+    var vehicleDesc = vehicle || company || '';
+    var vehiclePlate = plate;
+    if (!vehiclePlate && vehicleDesc) {
+      var plateMatch = vehicleDesc.match(/\b([A-Z0-9]{2,3}[A-Z0-9]{3,5})\s+([A-Z]{2})\b/);
+      if (plateMatch) vehiclePlate = plateMatch[1] + ' ' + plateMatch[2];
+    }
+
+    return {
+      name: name,
+      email: email,
+      phone: phone,
+      company: company,
+      lotId: lotId,
+      spaceNumber: spot,
+      monthlyRate: 0,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      status: status,
+      registrationStatus: 'pending',
+      vehicle: {
+        make: '',
+        model: vehicleDesc,
+        year: null,
+        plate: vehiclePlate,
+        type: (term.toLowerCase().includes('rv') || vehicleDesc.toLowerCase().includes('rv')) ? 'RV' : 'Semi Truck'
+      }
+    };
+  }
+
+  // Execute the import — saves each tenant to the database via POST /api/tenants
   function doImport() {
     var lotId = APP_DATA.lots[0] ? APP_DATA.lots[0].id : 'lot-1';
-    var imported = 0;
     var skipped = 0;
     var duplicates = 0;
+    var toCreate = [];
 
     importRows.forEach(function (row) {
-      var name    = importColMap.name      !== undefined ? String(row[importColMap.name]      || '').trim() : '';
+      var name = importColMap.name !== undefined ? String(row[importColMap.name] || '').trim() : '';
       if (!name) { skipped++; return; }
 
-      var email   = importColMap.email     !== undefined ? String(row[importColMap.email]     || '').trim() : '';
-      var phone   = formatPhone(importColMap.phone     !== undefined ? row[importColMap.phone]     : '');
-      var company = importColMap.company   !== undefined ? String(row[importColMap.company]   || '').trim() : '';
-      var plate   = importColMap.plate     !== undefined ? String(row[importColMap.plate]     || '').trim() : '';
-      var vehicle = importColMap.vehicle   !== undefined ? String(row[importColMap.vehicle]   || '').trim() : '';
-      var term    = importColMap.term      !== undefined ? String(row[importColMap.term]      || '').trim() : '';
-      var startDate = excelDateToISO(importColMap.startDate !== undefined ? row[importColMap.startDate] : '');
-      var endDate   = excelDateToISO(importColMap.endDate   !== undefined ? row[importColMap.endDate]   : '');
-
-      // Normalize spot number
       var spotRaw = importColMap.spot !== undefined ? row[importColMap.spot] : '';
       var spotNum = parseFloat(spotRaw);
       var spot = (!isNaN(spotNum) && spotNum > 0) ? String(Math.round(spotNum)) : String(spotRaw || '').trim();
 
-      // Determine status
-      var status = 'active';
-      var colBNote = String(row[1] || '').trim().toUpperCase();
-      if (colBNote === 'EMPTY') status = 'pending';
-      if (endDate && new Date(endDate) < new Date()) status = 'past';
-
-      // Skip duplicate (same name + spot)
       var isDupe = APP_DATA.tenants.some(function (t) {
         return t.name.toLowerCase() === name.toLowerCase() && t.spaceNumber === spot;
       });
       if (isDupe) { duplicates++; return; }
 
-      var initials = name.split(/\s+/).filter(Boolean).map(function (p) { return p[0]; }).join('').toUpperCase().slice(0, 2);
-
-      // Build vehicle description from whatever we have
-      var vehicleDesc = vehicle || company || '';
-      var vehiclePlate = plate;
-
-      // Try to detect plate from description if not in its own column
-      if (!vehiclePlate && vehicleDesc) {
-        var plateMatch = vehicleDesc.match(/\b([A-Z0-9]{2,3}[A-Z0-9]{3,5})\s+([A-Z]{2})\b/);
-        if (plateMatch) vehiclePlate = plateMatch[1] + ' ' + plateMatch[2];
-      }
-
-      APP_DATA.tenants.push({
-        id: generateId('t'),
-        name: name,
-        initials: initials,
-        email: email,
-        phone: phone,
-        company: company,
-        lotId: lotId,
-        spaceNumber: spot,
-        monthlyRate: 0,
-        startDate: startDate,
-        endDate: endDate,
-        status: status,
-        registrationStatus: 'pending',
-        vehicle: {
-          make: '',
-          model: vehicleDesc,
-          year: null,
-          plate: vehiclePlate,
-          type: term.toLowerCase().includes('rv') || vehicleDesc.toLowerCase().includes('rv') ? 'RV' : 'Semi Truck'
-        },
-        payments: []
-      });
-      imported++;
+      toCreate.push(buildTenantPayload(row, lotId));
     });
 
-    closeImportModal();
-    if (typeof updateTabCounts === 'function') updateTabCounts();
-    if (typeof renderTenantsTable === 'function') renderTenantsTable();
+    if (toCreate.length === 0) {
+      var msg = 'Nothing to import';
+      if (duplicates > 0) msg += ' — ' + duplicates + ' duplicate' + (duplicates !== 1 ? 's' : '') + ' already exist';
+      if (skipped > 0) msg += ', ' + skipped + ' blank row' + (skipped !== 1 ? 's' : '') + ' skipped';
+      showToast(msg, 'warning');
+      return;
+    }
 
-    var msg = 'Import complete: <strong>' + imported + '</strong> tenant' + (imported !== 1 ? 's' : '') + ' added';
-    if (duplicates > 0) msg += ', <strong>' + duplicates + '</strong> duplicate' + (duplicates !== 1 ? 's' : '') + ' skipped';
-    if (skipped > 0) msg += ', <strong>' + skipped + '</strong> blank row' + (skipped !== 1 ? 's' : '') + ' skipped';
-    showToast(msg.replace(/<strong>/g, '').replace(/<\/strong>/g, ''), 'success');
+    // Show saving state on button
+    var btn = document.getElementById('importConfirmBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving ' + toCreate.length + ' tenant' + (toCreate.length !== 1 ? 's' : '') + '...';
+
+    // POST each tenant to the API sequentially to avoid overwhelming the server
+    var saved = 0;
+    var failed = 0;
+
+    function saveNext(index) {
+      if (index >= toCreate.length) {
+        // All done — reload tenants from DB and re-render
+        YB.loadTenants().then(function (tenants) {
+          APP_DATA.tenants = tenants;
+          closeImportModal();
+          if (typeof updateTabCounts === 'function') updateTabCounts();
+          if (typeof renderTenantsTable === 'function') renderTenantsTable();
+
+          var msg = 'Import complete: ' + saved + ' tenant' + (saved !== 1 ? 's' : '') + ' saved to database';
+          if (duplicates > 0) msg += ', ' + duplicates + ' duplicate' + (duplicates !== 1 ? 's' : '') + ' skipped';
+          if (skipped > 0) msg += ', ' + skipped + ' blank row' + (skipped !== 1 ? 's' : '') + ' skipped';
+          if (failed > 0) msg += ', ' + failed + ' failed';
+          showToast(msg, failed > 0 ? 'warning' : 'success');
+        }).catch(function () {
+          closeImportModal();
+          showToast(saved + ' tenant' + (saved !== 1 ? 's' : '') + ' saved. Refresh to see them.', 'success');
+        });
+        return;
+      }
+
+      // Update button progress
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving ' + (index + 1) + ' / ' + toCreate.length + '...';
+
+      YB.saveTenant(toCreate[index]).then(function () {
+        saved++;
+        saveNext(index + 1);
+      }).catch(function () {
+        failed++;
+        saveNext(index + 1);
+      });
+    }
+
+    saveNext(0);
   }
 
   // ── Modal open/close ──────────────────────────────────────────────────────
