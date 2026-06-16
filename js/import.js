@@ -62,6 +62,7 @@
     var map = {};
     headers.forEach(function (h, i) {
       var hn = norm(h);
+      if (!hn) return; // skip blank/empty header columns — they'd match every synonym
       Object.keys(FIELD_SYNONYMS).forEach(function (field) {
         if (map[field] !== undefined) return;
         FIELD_SYNONYMS[field].forEach(function (syn) {
