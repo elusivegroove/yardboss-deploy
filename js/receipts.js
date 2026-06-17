@@ -46,6 +46,14 @@ var YardBossReceipts = (function() {
     return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
   }
 
+  function getAllSpaces(tenant) {
+    var spaces = tenant.spaceNumber ? [tenant.spaceNumber] : [];
+    if (tenant.additionalSpaces && tenant.additionalSpaces.length) {
+      spaces = spaces.concat(tenant.additionalSpaces);
+    }
+    return spaces;
+  }
+
   function generateHTML(tenant, payment, opts) {
     opts = opts || {};
     var rcp = opts.receiptNumber || receiptNumber();
@@ -64,6 +72,9 @@ var YardBossReceipts = (function() {
       : method.charAt(0).toUpperCase() + method.slice(1);
     var cardSurcharge = (payment && payment.cardSurcharge) || 0;
     var baseAmount = (payment && payment.baseAmount != null) ? payment.baseAmount : amount;
+    var allSpaces = getAllSpaces(tenant);
+    var spacesLabel = allSpaces.length > 1 ? 'Spaces' : 'Space #';
+    var spacesDisplay = allSpaces.length ? allSpaces.join(', ') : '—';
 
     return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
       '<style>' +
@@ -119,14 +130,14 @@ var YardBossReceipts = (function() {
       '<div class="section-title">Spot Assignment</div>' +
       '<div class="info-grid">' +
       '<div class="info-row"><span class="lbl">Facility</span><span class="val">' + lotName + '</span></div>' +
-      '<div class="info-row"><span class="lbl">Space #</span><span class="val">' + (tenant.spaceNumber||'—') + '</span></div>' +
+      '<div class="info-row"><span class="lbl">' + spacesLabel + '</span><span class="val">' + spacesDisplay + '</span></div>' +
       '<div class="info-row"><span class="lbl">Service Period</span><span class="val">' + formatD(serviceStart) + ' — ' + formatD(serviceEnd) + '</span></div>' +
       '<div class="info-row"><span class="lbl">Payment Method</span><span class="val">' + methodLabel + '</span></div>' +
       '</div>' +
 
       '<div class="section-title">Charges</div>' +
       '<div class="line-items">' +
-      '<div class="line-item"><span>Monthly Parking — Space ' + (tenant.spaceNumber||'') + '</span><span>' + fmtCurrency(baseAmount) + '</span></div>' +
+      '<div class="line-item"><span>Monthly Parking — ' + (allSpaces.length > 1 ? 'Spaces ' : 'Space ') + spacesDisplay + '</span><span>' + fmtCurrency(baseAmount) + '</span></div>' +
       (cardSurcharge > 0
         ? '<div class="line-item"><span>Card Processing Fee (' + (CARD_SURCHARGE_RATE*100).toFixed(1) + '%)</span><span>' + fmtCurrency(cardSurcharge) + '</span></div>'
         : '') +

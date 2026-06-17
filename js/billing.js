@@ -85,9 +85,11 @@ function renderBillingTable() {
       ? '<span class="badge badge-teal"><i class="fas fa-credit-card" style="margin-right:4px;"></i>Auto-Pay</span>'
       : '<span class="badge badge-gray"><i class="fas fa-money-bill-wave" style="margin-right:4px;"></i>Manual</span>';
 
+    var allSpaces = [t.spaceNumber].filter(Boolean).concat(t.additionalSpaces || []);
+    var spacesStr = allSpaces.length ? allSpaces.join(', ') : '—';
     return '<tr>'
       +'<td><div style="font-weight:600;color:var(--navy);">'+t.name+'</div><div style="font-size:0.75rem;color:var(--gray-400);">'+t.company+'</div></td>'
-      +'<td style="font-size:0.82rem;">'+(lot?lot.name:'—')+' &nbsp;·&nbsp; Space '+t.spaceNumber+'</td>'
+      +'<td style="font-size:0.82rem;">'+(lot?lot.name:'—')+' &nbsp;·&nbsp; '+(allSpaces.length>1?'Spaces ':'Space ')+spacesStr+'</td>'
       +'<td><span class="badge badge-red">'+formatCurrency(r.balance)+'</span></td>'
       +'<td>'+methodBadge+'</td>'
       +'<td>'
@@ -105,7 +107,8 @@ function exportBilling() {
     ['Name','Company','Lot','Space','BalanceDue','PaymentMethod'],
     list.map(function(r) {
       var t = r.tenant;
-      return [t.name, t.company, getLotName(t.lotId), t.spaceNumber, r.balance, t.paymentMethod || 'manual'];
+      var spaces = [t.spaceNumber].filter(Boolean).concat(t.additionalSpaces || []).join(', ');
+      return [t.name, t.company, getLotName(t.lotId), spaces, r.balance, t.paymentMethod || 'manual'];
     }),
     'billing-receivables.csv'
   );
