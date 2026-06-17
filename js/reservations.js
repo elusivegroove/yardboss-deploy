@@ -1423,6 +1423,38 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
   });
 
+  // Load SMS templates and wire quick-fill buttons in broadcast modal
+  (function loadBroadcastTemplates() {
+    var btnContainer = document.getElementById('bcastTemplateBtns');
+    if (!btnContainer) return;
+    fetch('/api/sms-templates')
+      .then(function(r){ return r.json(); })
+      .then(function(templates) {
+        btnContainer.innerHTML = '';
+        Object.keys(templates).forEach(function(key) {
+          var tpl = templates[key];
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = tpl.name;
+          btn.style.cssText = 'padding:4px 10px;border-radius:99px;border:1.5px solid var(--gray-200);background:#fff;color:var(--gray-600);font-size:0.75rem;font-weight:500;cursor:pointer;';
+          btn.addEventListener('mouseenter', function(){ this.style.borderColor='var(--teal)'; this.style.color='var(--teal)'; });
+          btn.addEventListener('mouseleave', function(){ this.style.borderColor='var(--gray-200)'; this.style.color='var(--gray-600)'; });
+          btn.addEventListener('click', function() {
+            var bodyEl = document.getElementById('bcastBody');
+            if (bodyEl) {
+              bodyEl.value = tpl.body;
+              bodyEl.dispatchEvent(new Event('input'));
+              bodyEl.focus();
+            }
+          });
+          btnContainer.appendChild(btn);
+        });
+      })
+      .catch(function() {
+        btnContainer.innerHTML = '<span style="font-size:0.78rem;color:var(--gray-400);">Templates unavailable</span>';
+      });
+  })();
+
   // Broadcast button
   var broadcastBtn = document.getElementById('broadcastBtn');
   if (broadcastBtn) broadcastBtn.addEventListener('click', openBroadcastModal);

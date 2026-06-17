@@ -35,14 +35,16 @@ async function runMigrations() {
     )
   `);
 
-  // ── Create app_settings table (Settings → Gate Code) ─────────────────────
+  // ── Create app_settings table (Settings → Gate Code, SMS Templates, etc.) ─
   await db.query(`
     CREATE TABLE IF NOT EXISTS app_settings (
       id                   INT PRIMARY KEY DEFAULT 1,
       gate_code            TEXT,
-      gate_code_updated_at TIMESTAMPTZ
+      gate_code_updated_at TIMESTAMPTZ,
+      sms_templates        JSONB
     )
   `);
+  await db.query(`ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS sms_templates JSONB`);
 
   // ── Create lots table ─────────────────────────────────────────────────────
   await db.query(`

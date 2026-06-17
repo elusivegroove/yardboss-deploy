@@ -152,6 +152,22 @@
       </form>
     </div>
 
+    <!-- SMS Templates -->
+    <div class="card" id="smsTemplatesCard">
+      <div class="card-header-row">
+        <div>
+          <h3 style="margin-bottom:2px;">SMS Templates</h3>
+          <p style="font-size:0.8rem;color:var(--gray-500)">Customize the text messages sent to tenants. Use <code style="background:var(--gray-100);padding:1px 5px;border-radius:4px;font-size:0.75rem;">{{variable}}</code> placeholders — they're filled in automatically when sent.</p>
+        </div>
+        <i class="fas fa-comment-sms" style="font-size:1.2rem;color:var(--teal)"></i>
+      </div>
+      <div id="smsTemplatesList" style="display:flex;flex-direction:column;gap:20px;"></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid var(--gray-100);">
+        <button type="button" class="btn-primary" id="saveSmsTemplatesBtn"><i class="fas fa-save"></i> Save Templates</button>
+        <span id="smsTplSavedMsg" style="display:none;align-items:center;gap:6px;background:var(--green-bg);color:#16a34a;padding:5px 12px;border-radius:6px;font-size:0.8rem;font-weight:600;"><i class="fas fa-check"></i> Saved</span>
+      </div>
+    </div>
+
     <!-- Pricing Plans -->
     <div class="card">
       <div class="card-header-row">
@@ -352,6 +368,7 @@
 <script src="js/api.js"></script>
 <script src="js/sidebar.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/sms-templates.js"></script>
 <script src="js/webhooks.js"></script>
 </body>
 </html>
