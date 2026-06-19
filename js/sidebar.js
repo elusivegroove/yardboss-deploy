@@ -415,16 +415,89 @@ window.YBTheme = {
       return out;
     }
 
-    function appendMsg(role, text) {
+    function getActiveTenantId() {
+      return (typeof _panelTenantId !== 'undefined' && _panelTenantId) ? _panelTenantId : null;
+    }
+
+    function getActiveTenantName() {
+      var id = getActiveTenantId();
+      if (!id || typeof APP_DATA === 'undefined' || !APP_DATA.tenants) return null;
+      var t = APP_DATA.tenants.filter(function(x) { return x.id === id; })[0];
+      return t ? t.name : null;
+    }
+
+    function getCurrentPage() {
+      return window.location.pathname.replace('.html', '').split('/').pop() || 'index';
+    }
+
+    function executeYBAction(action, btnEl) {
+      if (action.type === 'navigate') {
+        window.location.href = action.href;
+        return;
+      }
+      if (action.type === 'fn') {
+        var fn = window[action.fn];
+        if (typeof fn !== 'function') {
+          appendMsg('ai', 'That action isn\'t available on this page. Navigate there first.', []);
+          return;
+        }
+        var activeTenantId = getActiveTenantId();
+        var args = (action.args || []).map(function(a) {
+          return a === '{activeTenantId}' ? activeTenantId : a;
+        });
+        try {
+          fn.apply(null, args);
+          btnEl.classList.add('yb-action-done');
+          btnEl.innerHTML = '<i class="fas fa-check"></i> ' + action.label;
+          btnEl.disabled = true;
+        } catch (e) {
+          appendMsg('ai', 'That action failed. Try doing it manually.', []);
+        }
+      }
+    }
+
+    function appendMsg(role, text, actions) {
       var isAi = role === 'ai';
       var div = document.createElement('div');
       div.className = 'yb-chat-msg ' + (isAi ? 'yb-chat-msg-ai' : 'yb-chat-msg-user');
+
       if (isAi) {
-        div.innerHTML = '<div class="yb-chat-msg-avatar">YB</div>' +
-          '<div class="yb-chat-msg-bubble">' + mdToHtml(text) + '</div>';
+        var currentPage = getCurrentPage();
+        var activeTenantId = getActiveTenantId();
+
+        // Filter to only show contextually valid actions
+        var validActions = (actions || []).filter(function(a) {
+          if (a.requiresPage && a.requiresPage !== currentPage) return false;
+          if (a.requiresContext === 'activeTenant' && !activeTenantId) return false;
+          return true;
+        });
+
+        var actionsHtml = '';
+        if (validActions.length) {
+          actionsHtml = '<div class="yb-chat-actions">' +
+            validActions.map(function(a, i) {
+              return '<button class="yb-chat-action-btn" data-idx="' + i + '">' + a.label + '</button>';
+            }).join('') +
+          '</div>';
+        }
+
+        div.innerHTML =
+          '<div class="yb-chat-msg-avatar">YB</div>' +
+          '<div class="yb-chat-msg-content">' +
+            '<div class="yb-chat-msg-bubble">' + mdToHtml(text) + '</div>' +
+            actionsHtml +
+          '</div>';
+
+        if (validActions.length) {
+          div.querySelectorAll('.yb-chat-action-btn').forEach(function(b) {
+            var action = validActions[parseInt(b.dataset.idx, 10)];
+            b.addEventListener('click', function() { executeYBAction(action, b); });
+          });
+        }
       } else {
         div.innerHTML = '<div class="yb-chat-msg-bubble">' + mdToHtml(text) + '</div>';
       }
+
       body.appendChild(div);
       body.scrollTop = body.scrollHeight;
     }
@@ -454,28 +527,33 @@ window.YBTheme = {
       isLoading = true;
       sendBtn.disabled = true;
 
-      appendMsg('user', msg);
+      appendMsg('user', msg, []);
       chatHistory.push({ role: 'user', content: msg });
       showTyping();
-
-      var page = window.location.pathname.replace('.html', '').split('/').pop() || 'dashboard';
 
       fetch('/api/ai-help', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, page: page, history: chatHistory.slice(0, -1) })
+        body: JSON.stringify({
+          message: msg,
+          page: getCurrentPage(),
+          history: chatHistory.slice(0, -1),
+          activeTenantId: getActiveTenantId(),
+          activeTenantName: getActiveTenantName()
+        })
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         hideTyping();
-        var reply = data.reply || data.error || 'Sorry, something went wrong.';
-        appendMsg('ai', reply);
-        chatHistory.push({ role: 'assistant', content: reply });
+        var message = data.message || data.error || 'Sorry, something went wrong.';
+        var actions = data.actions || [];
+        appendMsg('ai', message, actions);
+        chatHistory.push({ role: 'assistant', content: message });
         if (chatHistory.length > 10) chatHistory = chatHistory.slice(-10);
       })
       .catch(function() {
         hideTyping();
-        appendMsg('ai', 'Sorry, I couldn\'t connect. Please try again.');
+        appendMsg('ai', 'Sorry, I couldn\'t connect. Please try again.', []);
       })
       .finally(function() {
         isLoading = false;
