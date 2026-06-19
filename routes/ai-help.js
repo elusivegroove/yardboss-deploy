@@ -124,7 +124,7 @@ router.post('/', async (req, res) => {
     const pageCtx = page ? `\n\nThe user is currently viewing: ${page}` : '';
 
     const body = {
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 600,
       system: SYSTEM_PROMPT + pageCtx,
       messages: [
@@ -145,6 +145,7 @@ router.post('/', async (req, res) => {
 
     if (!response.ok) {
       const errText = await response.text();
+      console.error('[ai-help] Anthropic error:', response.status, errText);
       return res.status(502).json({ error: 'Anthropic API error', detail: errText });
     }
 
