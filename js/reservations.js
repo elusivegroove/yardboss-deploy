@@ -66,9 +66,11 @@ function renderTenantsTable() {
       ? ' <span class="badge badge-navy" title="Rate is locked" style="font-size:0.65rem;"><i class="fas fa-lock" style="margin-right:2px;"></i>Locked</span>'
       : '';
     var approvalActions = t.status === 'pending'
-      ? '<button class="btn btn-secondary btn-sm btn-icon" title="Approve" style="color:#16a34a;" onclick="approveTenant(\''+t.id+'\')"><i class="fas fa-check"></i></button>'
-        + '<button class="btn btn-secondary btn-sm btn-icon" title="Reject" style="color:#ef4444;" onclick="openRejectModal(\''+t.id+'\')"><i class="fas fa-ban"></i></button>'
-      : '';
+      ? '<button class="btn btn-secondary btn-sm btn-icon" title="Approve Booking" style="color:#16a34a;" onclick="approveTenant(\''+t.id+'\')"><i class="fas fa-check"></i></button>'
+        + '<button class="btn btn-secondary btn-sm btn-icon" title="Reject Booking" style="color:#ef4444;" onclick="openRejectModal(\''+t.id+'\')"><i class="fas fa-ban"></i></button>'
+      : (t.registrationStatus !== 'verified'
+        ? '<button class="btn btn-secondary btn-sm btn-icon" title="Mark Registration Verified" style="color:#16a34a;" onclick="verifyRegistration(\''+t.id+'\')"><i class="fas fa-check"></i></button>'
+        : '');
     return '<tr style="cursor:pointer;" onclick="openTenantPanel(\''+t.id+'\')">'
       +'<td><div style="display:flex;align-items:center;gap:10px;">'
       +'<div style="width:34px;height:34px;border-radius:50%;background:'+color+';color:white;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;">'+t.initials+'</div>'
@@ -123,6 +125,15 @@ function openTenantPanel(tenantId) {
     document.getElementById('panelRejectBtn').onclick = function(){ openRejectModal(tenantId); };
   } else {
     approvalBanner.style.display = 'none';
+  }
+
+  // Verify registration banner (active tenants with unverified registration)
+  var verifyBanner = document.getElementById('panelVerifyBanner');
+  if (tenant.status !== 'pending' && tenant.registrationStatus !== 'verified') {
+    verifyBanner.style.display = '';
+    document.getElementById('panelVerifyBtn').onclick = function(){ verifyRegistration(tenantId); };
+  } else {
+    verifyBanner.style.display = 'none';
   }
 
   document.getElementById('panelEmail').textContent = tenant.email || '—';
@@ -503,6 +514,22 @@ async function handleRejectSubmit() {
   }
   document.getElementById('rejectModal').classList.remove('open');
   updateTabCounts();
+  renderTenantsTable();
+  if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+async function verifyRegistration(tenantId) {
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  var fields = { id: tenantId, registrationStatus: 'verified' };
+  try {
+    await YB.saveTenant(fields);
+    Object.assign(tenant, fields);
+    showToast(tenant.name + ' marked as Verified', 'success');
+  } catch (err) {
+    Object.assign(tenant, fields);
+    showToast('Marked Verified (offline)', 'warning');
+  }
   renderTenantsTable();
   if (_panelTenantId === tenantId) openTenantPanel(tenantId);
 }
