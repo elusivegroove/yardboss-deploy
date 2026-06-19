@@ -638,7 +638,7 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 .theme-preview-midnight::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 15px; background: #0d1829; border-bottom: 1px solid #1a2d45; }
 
 /* ===== AI HELP CHAT WIDGET ===== */
-#ybChatWidget { position: fixed; bottom: 24px; right: 24px; z-index: 500; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+#ybChatWidget { position: fixed; bottom: 24px; right: 24px; z-index: 700; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
 
 #ybChatBtn {
   width: 54px; height: 54px; border-radius: 50%;
