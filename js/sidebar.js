@@ -341,6 +341,162 @@ window.YBTheme = {
     });
   }
 
+  // ── AI Help Chat Widget ───────────────────────────────────────────────────────
+  (function() {
+    var CHAT_HTML = '<div id="ybChatWidget">' +
+      '<div id="ybChatPanel">' +
+        '<div class="yb-chat-header">' +
+          '<div class="yb-chat-header-info">' +
+            '<div class="yb-chat-avatar-sm">YB</div>' +
+            '<div><div class="yb-chat-title">YardBoss Assistant</div><div class="yb-chat-subtitle">Ask me anything</div></div>' +
+          '</div>' +
+          '<button class="yb-chat-close" id="ybChatClose"><i class="fas fa-times"></i></button>' +
+        '</div>' +
+        '<div class="yb-chat-body" id="ybChatBody">' +
+          '<div class="yb-chat-msg yb-chat-msg-ai">' +
+            '<div class="yb-chat-msg-avatar">YB</div>' +
+            '<div class="yb-chat-msg-bubble">Hi! I\'m your YardBoss Assistant. Ask me how to do anything — add a tenant, record a payment, verify a registration, set up SMS templates, and more.</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="yb-chat-foot">' +
+          '<textarea id="ybChatInput" placeholder="Ask me anything..." rows="1"></textarea>' +
+          '<button id="ybChatSend"><i class="fas fa-paper-plane"></i></button>' +
+        '</div>' +
+      '</div>' +
+      '<button id="ybChatBtn" title="Ask YardBoss Assistant">' +
+        '<i class="fas fa-comments"></i>' +
+        '<span class="yb-chat-btn-dot"></span>' +
+      '</button>' +
+    '</div>';
+
+    document.body.insertAdjacentHTML('beforeend', CHAT_HTML);
+
+    var panel    = document.getElementById('ybChatPanel');
+    var btn      = document.getElementById('ybChatBtn');
+    var closeBtn = document.getElementById('ybChatClose');
+    var body     = document.getElementById('ybChatBody');
+    var input    = document.getElementById('ybChatInput');
+    var sendBtn  = document.getElementById('ybChatSend');
+    var chatOpen = false;
+    var isLoading = false;
+    var chatHistory = [];
+
+    function toggleChat() {
+      chatOpen = !chatOpen;
+      panel.classList.toggle('open', chatOpen);
+      if (chatOpen) { setTimeout(function() { input.focus(); }, 220); }
+    }
+
+    function mdToHtml(text) {
+      var escaped = text
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      var lines = escaped.split('\n');
+      var out = '';
+      var inOl = false, inUl = false;
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var olMatch = line.match(/^(\d+)\.\s+(.*)/);
+        var ulMatch = line.match(/^[-*]\s+(.*)/);
+        if (olMatch) {
+          if (!inOl) { if (inUl) { out += '</ul>'; inUl = false; } out += '<ol>'; inOl = true; }
+          out += '<li>' + olMatch[2] + '</li>';
+        } else if (ulMatch) {
+          if (!inUl) { if (inOl) { out += '</ol>'; inOl = false; } out += '<ul>'; inUl = true; }
+          out += '<li>' + ulMatch[1] + '</li>';
+        } else {
+          if (inOl) { out += '</ol>'; inOl = false; }
+          if (inUl) { out += '</ul>'; inUl = false; }
+          if (line === '') { out += '<br>'; } else { out += line + '<br>'; }
+        }
+      }
+      if (inOl) out += '</ol>';
+      if (inUl) out += '</ul>';
+      return out;
+    }
+
+    function appendMsg(role, text) {
+      var isAi = role === 'ai';
+      var div = document.createElement('div');
+      div.className = 'yb-chat-msg ' + (isAi ? 'yb-chat-msg-ai' : 'yb-chat-msg-user');
+      if (isAi) {
+        div.innerHTML = '<div class="yb-chat-msg-avatar">YB</div>' +
+          '<div class="yb-chat-msg-bubble">' + mdToHtml(text) + '</div>';
+      } else {
+        div.innerHTML = '<div class="yb-chat-msg-bubble">' + mdToHtml(text) + '</div>';
+      }
+      body.appendChild(div);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function showTyping() {
+      var el = document.createElement('div');
+      el.className = 'yb-chat-msg yb-chat-msg-ai';
+      el.id = 'ybTyping';
+      el.innerHTML = '<div class="yb-chat-msg-avatar">YB</div>' +
+        '<div class="yb-chat-msg-bubble yb-chat-typing">' +
+          '<span></span><span></span><span></span>' +
+        '</div>';
+      body.appendChild(el);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function hideTyping() {
+      var el = document.getElementById('ybTyping');
+      if (el) el.parentNode.removeChild(el);
+    }
+
+    function send() {
+      var msg = input.value.trim();
+      if (!msg || isLoading) return;
+      input.value = '';
+      input.style.height = 'auto';
+      isLoading = true;
+      sendBtn.disabled = true;
+
+      appendMsg('user', msg);
+      chatHistory.push({ role: 'user', content: msg });
+      showTyping();
+
+      var page = window.location.pathname.replace('.html', '').split('/').pop() || 'dashboard';
+
+      fetch('/api/ai-help', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, page: page, history: chatHistory.slice(0, -1) })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        hideTyping();
+        var reply = data.reply || data.error || 'Sorry, something went wrong.';
+        appendMsg('ai', reply);
+        chatHistory.push({ role: 'assistant', content: reply });
+        if (chatHistory.length > 10) chatHistory = chatHistory.slice(-10);
+      })
+      .catch(function() {
+        hideTyping();
+        appendMsg('ai', 'Sorry, I couldn\'t connect. Please try again.');
+      })
+      .finally(function() {
+        isLoading = false;
+        sendBtn.disabled = false;
+        input.focus();
+      });
+    }
+
+    btn.addEventListener('click', toggleChat);
+    closeBtn.addEventListener('click', toggleChat);
+    sendBtn.addEventListener('click', send);
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+    input.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 80) + 'px';
+    });
+  })();
+
   // ── Theme picker ──────────────────────────────────────────
   var currentTheme = localStorage.getItem('yb-theme') || 'light';
   syncThemeUI(currentTheme);

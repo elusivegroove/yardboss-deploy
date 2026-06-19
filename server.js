@@ -58,6 +58,7 @@ const brandingRouter = require('./routes/branding');
 const gateCodeRouter = require('./routes/gate-code');
 const smsTemplatesRouter = require('./routes/sms-templates');
 const poyntRouter = require('./routes/poynt');
+const aiHelpRouter = require('./routes/ai-help');
 
 app.use('/api/payments', paymentsRouter);
 app.use('/api/reservations', reservationsRouter);
@@ -73,6 +74,7 @@ app.use('/api/branding', brandingRouter);
 app.use('/api/gate-code', gateCodeRouter);
 app.use('/api/sms-templates', smsTemplatesRouter);
 app.use('/api/poynt', poyntRouter);
+app.use('/api/ai-help', aiHelpRouter);
 // Required env vars: ANTHROPIC_API_KEY, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE
 // SMS env vars: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
 
