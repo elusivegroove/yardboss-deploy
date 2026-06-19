@@ -493,6 +493,19 @@ window.YBTheme = {
             var action = validActions[parseInt(b.dataset.idx, 10)];
             b.addEventListener('click', function() { executeYBAction(action, b); });
           });
+
+          // Auto-execute flagged actions after a short delay so user can read first
+          validActions.forEach(function(a, i) {
+            if (!a.autoExecute) return;
+            var b = div.querySelector('[data-idx="' + i + '"]');
+            if (!b) return;
+            setTimeout(function() {
+              if (b.disabled) return; // already fired manually
+              b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' +
+                (a.type === 'navigate' ? 'Going...' : 'Doing it...');
+              setTimeout(function() { executeYBAction(a, b); }, 500);
+            }, 900);
+          });
         }
       } else {
         div.innerHTML = '<div class="yb-chat-msg-bubble">' + mdToHtml(text) + '</div>';

@@ -42,6 +42,11 @@ Action selection rules:
 - If the question involves a tenant and requiresPage:"reservations" but current page is not reservations, use the navigate action instead
 - For tenant-specific actions, always use requiresContext:"activeTenant" — the UI handles showing/hiding based on whether a panel is open
 - Never invent action types or function names outside the catalog above
+- Set "autoExecute": true on an action when the user is clearly asking you to DO something, not asking how. Imperative phrases: "verify", "approve", "go to", "take me to", "open", "add", "record", "do it", "can you do", "please do". Informational phrases ("how do I", "what is", "where is", "explain") should NOT set autoExecute. Examples:
+  - "how do I verify a registration?" → no autoExecute (explaining)
+  - "verify John's registration" → autoExecute: true (imperative)
+  - "take me to billing" → autoExecute: true on the navigate action
+  - "open the add tenant form" → autoExecute: true on openAddTenantModal
 
 ## PAGES & FEATURES
 
