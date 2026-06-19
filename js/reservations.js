@@ -303,6 +303,7 @@ function openTenantPanel(tenantId) {
   }
   document.getElementById('panelAddChargeBtn').onclick = function(){ openLedgerEntryModal(tenantId, 'charge'); };
   document.getElementById('panelRecordPaymentBtn').onclick = function(){ openLedgerEntryModal(tenantId, 'payment'); };
+  document.getElementById('panelPoyntBtn').onclick = function(){ openPoyntChargeModal(tenantId); };
   document.getElementById('panelPayLinkBtn').onclick = function(){ copyPaymentLink(tenantId); };
 
   // Payment / charge history
@@ -1506,6 +1507,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     openTenantPanel(tenantParam);
   }
 
+  // Poynt modal events
+  document.getElementById('closePoyntModal').addEventListener('click', function() {
+    if (_poyntPollTimer) { clearInterval(_poyntPollTimer); _poyntPollTimer = null; }
+    document.getElementById('poyntChargeModal').classList.remove('open');
+  });
+  document.getElementById('cancelPoyntModal').addEventListener('click', function() {
+    if (_poyntPollTimer) { clearInterval(_poyntPollTimer); _poyntPollTimer = null; }
+    document.getElementById('poyntChargeModal').classList.remove('open');
+  });
+  document.getElementById('poyntChargeModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      if (_poyntPollTimer) { clearInterval(_poyntPollTimer); _poyntPollTimer = null; }
+      this.classList.remove('open');
+    }
+  });
+  document.getElementById('submitPoyntCharge').addEventListener('click', submitPoyntCharge);
+
   // Escape key
   document.addEventListener('keydown', function(e) {
     if (e.key==='Escape') {
@@ -1516,9 +1534,212 @@ document.addEventListener('DOMContentLoaded', async function() {
       document.getElementById('rejectModal').classList.remove('open');
       document.getElementById('ledgerEntryModal').classList.remove('open');
       document.getElementById('additionalDriverModal').classList.remove('open');
+      if (_poyntPollTimer) { clearInterval(_poyntPollTimer); _poyntPollTimer = null; }
+      document.getElementById('poyntChargeModal').classList.remove('open');
     }
   });
 });
+
+// ── Poynt Terminal Charge ─────────────────────────────────────────────────
+var _poyntTenantId = null;
+var _poyntPollTimer = null;
+var _poyntTerminals = [];
+
+function openPoyntChargeModal(tenantId) {
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  _poyntTenantId = tenantId;
+  if (_poyntPollTimer) { clearInterval(_poyntPollTimer); _poyntPollTimer = null; }
+
+  // Reset UI
+  document.getElementById('poyntLoadingTerminals').style.display = '';
+  document.getElementById('poyntChargeForm').style.display = 'none';
+  document.getElementById('poyntErrorState').style.display = 'none';
+  document.getElementById('poyntChargeStatus').style.display = 'none';
+  document.getElementById('submitPoyntCharge').disabled = false;
+  document.getElementById('submitPoyntCharge').innerHTML = '<i class="fas fa-paper-plane"></i> Send to Terminal';
+
+  // Pre-fill
+  document.getElementById('poyntTenantName').value = tenant.name;
+  document.getElementById('poyntAmount').value = tenant.monthlyRate ? Number(tenant.monthlyRate).toFixed(2) : '';
+  var now = new Date();
+  document.getElementById('poyntDescription').value = 'Monthly parking — '
+    + now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  document.getElementById('poyntChargeModal').classList.add('open');
+
+  fetch('/api/poynt/status')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('poyntLoadingTerminals').style.display = 'none';
+      if (!data.configured) {
+        document.getElementById('poyntErrorMsg').textContent = 'Poynt is not configured. Add credentials to .env files and restart the server.';
+        document.getElementById('poyntErrorState').style.display = '';
+        return;
+      }
+      if (data.error) {
+        document.getElementById('poyntErrorMsg').textContent = 'Connection error: ' + data.error;
+        document.getElementById('poyntErrorState').style.display = '';
+        return;
+      }
+      _poyntTerminals = data.terminals || [];
+      var sel = document.getElementById('poyntTerminalSelect');
+      sel.innerHTML = _poyntTerminals.length
+        ? _poyntTerminals.map(function(t) {
+            var label = (t.storeName ? t.storeName + ' — ' : '') + t.terminalName;
+            if (t.status && t.status !== 'UNKNOWN') label += ' (' + t.status + ')';
+            return '<option value="' + t.terminalId + '" data-store="' + t.storeId + '">' + label + '</option>';
+          }).join('')
+        : '<option value="">No terminals found</option>';
+      if (_poyntTerminals.length === 1) sel.value = _poyntTerminals[0].terminalId;
+      document.getElementById('poyntChargeForm').style.display = '';
+    })
+    .catch(function(err) {
+      document.getElementById('poyntLoadingTerminals').style.display = 'none';
+      document.getElementById('poyntErrorMsg').textContent = 'Failed to load terminals: ' + err.message;
+      document.getElementById('poyntErrorState').style.display = '';
+    });
+}
+
+function submitPoyntCharge() {
+  var sel = document.getElementById('poyntTerminalSelect');
+  var terminalId = sel.value;
+  if (!terminalId) { showToast('Please select a terminal', 'warning'); return; }
+
+  var terminal = _poyntTerminals.find(function(t) { return t.terminalId === terminalId; });
+  var storeId = terminal ? terminal.storeId : (sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].dataset.store : '');
+  if (!storeId) { showToast('Could not determine store ID for terminal', 'error'); return; }
+
+  var amount = parseFloat(document.getElementById('poyntAmount').value);
+  if (!amount || amount <= 0) { showToast('Please enter a valid amount', 'warning'); return; }
+
+  var tenant = getTenant(_poyntTenantId);
+  var description = document.getElementById('poyntDescription').value.trim();
+
+  var statusEl = document.getElementById('poyntChargeStatus');
+  statusEl.style.display = '';
+  statusEl.style.background = '#fefce8';
+  statusEl.style.color = '#854d0e';
+  statusEl.style.border = '1px solid #fde68a';
+  statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending to terminal…';
+  document.getElementById('submitPoyntCharge').disabled = true;
+
+  fetch('/api/poynt/charge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      storeId: storeId,
+      terminalId: terminalId,
+      amount: amount,
+      tenantId: _poyntTenantId,
+      tenantName: tenant ? tenant.name : '',
+      description: description,
+    }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) {
+      statusEl.style.background = '#fee2e2';
+      statusEl.style.color = '#991b1b';
+      statusEl.style.border = '1px solid #fca5a5';
+      statusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + data.error;
+      document.getElementById('submitPoyntCharge').disabled = false;
+      return;
+    }
+    statusEl.style.background = '#dcfce7';
+    statusEl.style.color = '#166534';
+    statusEl.style.border = '1px solid #86efac';
+    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Sent! Waiting for customer to tap card…';
+    startPoyntPoll(data.referenceId, amount, description);
+  })
+  .catch(function(err) {
+    statusEl.style.background = '#fee2e2';
+    statusEl.style.color = '#991b1b';
+    statusEl.style.border = '1px solid #fca5a5';
+    statusEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + err.message;
+    document.getElementById('submitPoyntCharge').disabled = false;
+  });
+}
+
+function startPoyntPoll(referenceId, amount, description) {
+  var attempts = 0;
+  var maxAttempts = 30;
+  var statusEl = document.getElementById('poyntChargeStatus');
+
+  _poyntPollTimer = setInterval(function() {
+    attempts++;
+    if (attempts > maxAttempts) {
+      clearInterval(_poyntPollTimer);
+      _poyntPollTimer = null;
+      statusEl.style.background = '#fefce8';
+      statusEl.style.color = '#854d0e';
+      statusEl.style.border = '1px solid #fde68a';
+      statusEl.innerHTML = '<i class="fas fa-clock"></i> Timed out (90s). Check terminal status or record the payment manually.';
+      document.getElementById('submitPoyntCharge').disabled = false;
+      return;
+    }
+    fetch('/api/poynt/poll/' + encodeURIComponent(referenceId))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data || data.error) return;
+        var txnStatus = (data.status || '').toUpperCase();
+        if (txnStatus === 'CAPTURED' || txnStatus === 'AUTHORIZED' || txnStatus === 'COMPLETED' || txnStatus === 'SALE') {
+          clearInterval(_poyntPollTimer);
+          _poyntPollTimer = null;
+          var cardInfo = data.transaction && data.transaction.last4 ? ' (•••• ' + data.transaction.last4 + ')' : '';
+          statusEl.style.background = '#dcfce7';
+          statusEl.style.color = '#166534';
+          statusEl.style.border = '1px solid #86efac';
+          statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Approved' + cardInfo + '! Recording payment…';
+          recordPoyntPayment(amount, description, data.transaction);
+        } else if (txnStatus === 'VOIDED' || txnStatus === 'CANCELLED' || txnStatus === 'DECLINED' || txnStatus === 'REFUNDED') {
+          clearInterval(_poyntPollTimer);
+          _poyntPollTimer = null;
+          statusEl.style.background = '#fee2e2';
+          statusEl.style.color = '#991b1b';
+          statusEl.style.border = '1px solid #fca5a5';
+          statusEl.innerHTML = '<i class="fas fa-times-circle"></i> Payment ' + txnStatus.toLowerCase() + '. Try again.';
+          document.getElementById('submitPoyntCharge').disabled = false;
+        }
+      })
+      .catch(function() {});
+  }, 3000);
+}
+
+function recordPoyntPayment(amount, description, txn) {
+  var tenant = getTenant(_poyntTenantId);
+  if (!tenant) return;
+  var last4 = txn && txn.last4 ? ' •••• ' + txn.last4 : '';
+  var entry = {
+    date: new Date().toISOString().slice(0, 10),
+    amount: amount,
+    status: 'paid',
+    method: 'poynt',
+    type: 'payment',
+    description: description || ('Poynt terminal payment' + last4),
+    poyntTransactionId: txn ? txn.id : null,
+    last4: txn ? txn.last4 : null,
+  };
+
+  YB.addPayment(_poyntTenantId, entry)
+    .then(function(updated) {
+      tenant.payments = updated.payments;
+      showToast('Payment of ' + formatCurrency(amount) + ' recorded for ' + tenant.name, 'success');
+      setTimeout(function() {
+        document.getElementById('poyntChargeModal').classList.remove('open');
+        openTenantPanel(_poyntTenantId);
+      }, 2000);
+    })
+    .catch(function() {
+      tenant.payments = tenant.payments || [];
+      tenant.payments.unshift(entry);
+      showToast('Payment recorded (offline)', 'warning');
+      setTimeout(function() {
+        document.getElementById('poyntChargeModal').classList.remove('open');
+        openTenantPanel(_poyntTenantId);
+      }, 2000);
+    });
+}
 
 // ── Broadcast Modal ───────────────────────────────────────────────────────
 var _broadcastFilter = 'active';
