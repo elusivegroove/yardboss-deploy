@@ -109,18 +109,11 @@
   // backend restart), and every create/update/delete dual-writes locally.
 
   function listItems() {
-    return localList().then(function (localItems) {
-      return apiList().then(function (apiItems) {
-        var apiIds = {};
-        apiItems.forEach(function (i) { apiIds[i.id] = true; });
-        var missing = localItems.filter(function (i) { return !apiIds[i.id]; });
-        if (!missing.length) return apiItems;
-        return Promise.all(missing.map(function (i) {
-          return apiCreate(i).catch(function () { return i; });
-        })).then(function (created) { return apiItems.concat(created); });
-      }).catch(function () {
-        return localItems;
-      });
+    return apiList().then(function (apiItems) {
+      localSaveAll(apiItems);
+      return apiItems;
+    }).catch(function () {
+      return localList();
     });
   }
 
