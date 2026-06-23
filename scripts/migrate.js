@@ -128,6 +128,9 @@ async function runMigrations() {
   // ── SMS consent (TCPA opt-in for account-related text messages) ──
   await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS sms_consent BOOLEAN DEFAULT false`);
 
+  // ── Membership type (Truck Parking Club, Stackly, Neighbor — informational, excluded from revenue) ──
+  await db.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS membership_type TEXT DEFAULT 'standard'`);
+
   console.log('[migrate] Tables ready.');
 
   // ── Default pricing plans (Semi Truck + RV) ──────────────────────────────

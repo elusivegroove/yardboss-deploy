@@ -308,11 +308,13 @@ tbody tr:last-child td { border-bottom: none; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--gray-100); }
 
 /* ===== SLIDE PANEL ===== */
-.slide-panel { position: fixed; right: 0; top: 0; bottom: 0; width: 440px; background: white; box-shadow: -4px 0 28px rgba(0,0,0,0.12); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); z-index: 600; overflow-y: auto; }
+.slide-panel { position: fixed; right: 0; top: 0; bottom: 0; width: 440px; background: white; box-shadow: -4px 0 28px rgba(0,0,0,0.12); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); z-index: 600; display: flex; flex-direction: column; overflow: hidden; }
 .slide-panel.open { transform: translateX(0); }
 .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 599; display: none; }
 .panel-overlay.show { display: block; }
-.panel-header { padding: 20px 24px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: white; z-index: 1; }
+.panel-header { padding: 20px 24px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: white; z-index: 1; }
+.panel-body { flex: 1; overflow-y: auto; }
+.panel-footer { flex-shrink: 0; display: flex; gap: 10px; padding: 16px; border-top: 1px solid var(--gray-100); background: white; }
 .panel-section { padding: 16px 24px; border-bottom: 1px solid var(--gray-100); }
 .panel-section h4 { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-400); margin-bottom: 10px; font-weight: 700; }
 .panel-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 0.85rem; }
@@ -526,6 +528,8 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 [data-theme="midnight"] .slide-panel { background: var(--white); }
 [data-theme="dark"] .panel-header,
 [data-theme="midnight"] .panel-header { background: var(--white); }
+[data-theme="dark"] .panel-footer,
+[data-theme="midnight"] .panel-footer { background: var(--white); }
 [data-theme="dark"] .btn-secondary,
 [data-theme="midnight"] .btn-secondary { background: var(--gray-100); border-color: var(--gray-300); color: var(--gray-600); }
 [data-theme="dark"] .filter-select,

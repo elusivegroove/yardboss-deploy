@@ -33,6 +33,17 @@ function updateTabCounts() {
   });
 }
 
+var MEMBERSHIP_CONFIG = {
+  'truck-parking-club': { label: 'Truck Parking Club', color: '#f97316', bg: '#fff7ed', border: '#fed7aa' },
+  'stackly':            { label: 'Stackly',            color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe' },
+  'neighbor':           { label: 'Neighbor',           color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+  'standard':           { label: null, color: null, bg: null, border: null }
+};
+
+function getMembershipConfig(t) {
+  return MEMBERSHIP_CONFIG[t.membershipType] || MEMBERSHIP_CONFIG['standard'];
+}
+
 function renderTenantsTable() {
   var tbody = document.getElementById('tenantsTbody');
   if (!tbody) return;
@@ -44,6 +55,8 @@ function renderTenantsTable() {
   tbody.innerHTML = list.map(function(t) {
     var globalIdx = APP_DATA.tenants.indexOf(t);
     var color = getAvatarColor(globalIdx);
+    var mc = getMembershipConfig(t);
+    var rowStyle = mc.bg ? 'cursor:pointer;background:'+mc.bg+';' : 'cursor:pointer;';
     var regBadge = t.registrationStatus === 'verified'
       ? '<span class="badge badge-green"><i class="fas fa-check-circle" style="margin-right:3px;font-size:0.65rem;"></i>Verified</span>'
       : '<span class="badge badge-yellow"><i class="fas fa-clock" style="margin-right:3px;font-size:0.65rem;"></i>Pending</span>';
@@ -65,21 +78,27 @@ function renderTenantsTable() {
     var lockBadge = t.priceLocked
       ? ' <span class="badge badge-navy" title="Rate is locked" style="font-size:0.65rem;"><i class="fas fa-lock" style="margin-right:2px;"></i>Locked</span>'
       : '';
+    var membershipBadge = mc.label
+      ? ' <span class="badge" style="background:'+mc.bg+';color:'+mc.color+';border:1px solid '+mc.border+';font-size:0.62rem;">'+mc.label+'</span>'
+      : '';
+    var allSpaces = (t.spaceNumbers && t.spaceNumbers.length)
+      ? t.spaceNumbers.join(', ')
+      : (t.spaceNumber || '—');
     var approvalActions = t.status === 'pending'
       ? '<button class="btn btn-secondary btn-sm btn-icon" title="Approve Booking" style="color:#16a34a;" onclick="approveTenant(\''+t.id+'\')"><i class="fas fa-check"></i></button>'
         + '<button class="btn btn-secondary btn-sm btn-icon" title="Reject Booking" style="color:#ef4444;" onclick="openRejectModal(\''+t.id+'\')"><i class="fas fa-ban"></i></button>'
       : (t.registrationStatus !== 'verified'
         ? '<button class="btn btn-secondary btn-sm btn-icon" title="Mark Registration Verified" style="color:#16a34a;" onclick="verifyRegistration(\''+t.id+'\')"><i class="fas fa-check"></i></button>'
         : '');
-    return '<tr style="cursor:pointer;" onclick="openTenantPanel(\''+t.id+'\')">'
+    return '<tr style="'+rowStyle+'" onclick="openTenantPanel(\''+t.id+'\')">'
       +'<td><div style="display:flex;align-items:center;gap:10px;">'
       +'<div style="width:34px;height:34px;border-radius:50%;background:'+color+';color:white;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;">'+t.initials+'</div>'
-      +'<div><div style="font-weight:600;color:var(--navy);">'+t.name+walkInBadge+'</div><div style="font-size:0.75rem;color:var(--gray-400);">'+t.company+'</div></div>'
+      +'<div><div style="font-weight:600;color:var(--navy);">'+t.name+walkInBadge+membershipBadge+'</div><div style="font-size:0.75rem;color:var(--gray-400);">'+t.company+'</div></div>'
       +'</div></td>'
       +'<td>'+regBadge+'</td>'
       +'<td style="font-size:0.82rem;">'+(t.email ? '<a href="mailto:'+t.email+'" style="color:var(--teal);text-decoration:none;" onclick="event.stopPropagation()">'+t.email+'</a>' : '<span style="color:var(--gray-400);">—</span>')+'</td>'
       +'<td style="font-size:0.82rem;white-space:nowrap;">'+t.phone+'</td>'
-      +'<td style="font-size:0.82rem;">'+getLotName(t.lotId)+'</td>'
+      +'<td style="font-size:0.82rem;"><div style="font-size:0.78rem;color:var(--gray-500);">'+getLotName(t.lotId)+'</div><div style="font-weight:600;color:var(--navy);font-size:0.82rem;">'+allSpaces+'</div></td>'
       +'<td>'+stBadge+'</td>'
       +'<td style="font-size:0.82rem;"><span class="badge badge-teal">'+formatCurrency(t.monthlyRate)+'/mo</span>'+autopayBadge+lockBadge+'</td>'
       +'<td onclick="event.stopPropagation()">'
@@ -116,6 +135,21 @@ function openTenantPanel(tenantId) {
     : tenant.status.charAt(0).toUpperCase()+tenant.status.slice(1);
   statusEl.className = 'badge '+stClass;
   statusEl.textContent = stLabel;
+
+  // Membership badge
+  var panelMcEl = document.getElementById('panelMembershipBadge');
+  if (panelMcEl) {
+    var mc = getMembershipConfig(tenant);
+    if (mc.label) {
+      panelMcEl.style.display = '';
+      panelMcEl.textContent = mc.label;
+      panelMcEl.style.background = mc.bg;
+      panelMcEl.style.color = mc.color;
+      panelMcEl.style.border = '1px solid '+mc.border;
+    } else {
+      panelMcEl.style.display = 'none';
+    }
+  }
 
   // Approval banner (pending bookings only)
   var approvalBanner = document.getElementById('panelApprovalBanner');
@@ -1007,6 +1041,7 @@ function openEditTenantModal(tenantId) {
   document.getElementById('atStart').value   = t.startDate || '';
   document.getElementById('atEnd').value     = t.endDate || '';
   document.getElementById('atStatus').value  = t.status || 'active';
+  document.getElementById('atMembershipType').value = t.membershipType || 'standard';
   document.getElementById('atRateType').value = t.rateType || 'monthly';
   document.getElementById('atDueDate').value = t.dueDate || '';
 
@@ -1076,6 +1111,7 @@ async function handleAddTenantSubmit(e) {
   var start   = document.getElementById('atStart').value;
   var end     = document.getElementById('atEnd').value;
   var status  = document.getElementById('atStatus').value;
+  var membershipType = document.getElementById('atMembershipType').value;
   var rateType = document.getElementById('atRateType').value;
   var dueDate  = document.getElementById('atDueDate').value || null;
 
@@ -1119,7 +1155,7 @@ async function handleAddTenantSubmit(e) {
     insuranceExpDate:insuranceExpDate,
     autoRenew:autoRenew, renewalPeriod:renewalPeriod, renewalRate:renewalRate,
     paymentMethod:paymentMethod, autopayCard:autopayCard, autopayNextDate:autopayNextDate,
-    rateType:rateType, dueDate:dueDate, smsConsent:smsConsent
+    rateType:rateType, dueDate:dueDate, smsConsent:smsConsent, membershipType:membershipType
   };
   tenantData.renewalStatus = computeRenewalStatus(Object.assign({}, editId ? getTenant(editId) : {}, {
     dueDate: dueDate, rateType: rateType, status: status
@@ -1193,6 +1229,7 @@ async function handleWalkInSubmit(e) {
   var rateType   = document.getElementById('wiRateType').value;
   var dueDate    = document.getElementById('wiDueDate').value || null;
   var vType      = document.getElementById('wiVehicleType').value;
+  var wiMembershipType = document.getElementById('wiMembershipType').value;
   var plate      = '';
   var plateState = '';
   var payAmt     = parseFloat(document.getElementById('wiPayAmount').value) || 0;
@@ -1227,7 +1264,8 @@ async function handleWalkInSubmit(e) {
     vehicle: { make: '', model: '', year: null, plate: plate, type: vType },
     plateState: plateState, truckNumber: null, trailerNumber: null,
     registrationStatus: 'pending', walkIn: true, payments: payments,
-    paymentMethod: 'manual', rateType: rateType, dueDate: dueDate, smsConsent: smsConsent
+    paymentMethod: 'manual', rateType: rateType, dueDate: dueDate, smsConsent: smsConsent,
+    membershipType: wiMembershipType
   };
   tenantData.renewalStatus = computeRenewalStatus(tenantData);
 

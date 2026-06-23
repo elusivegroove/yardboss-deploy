@@ -49,7 +49,7 @@
             <th>Registration</th>
             <th>Email</th>
             <th>Phone</th>
-            <th>Lot</th>
+            <th>Lot · Spot(s)</th>
             <th>Status</th>
             <th>Booking</th>
             <th>Actions</th>
@@ -69,12 +69,16 @@
       <div class="tenant-avatar-lg" id="panelAvatar">--</div>
       <div>
         <div style="font-size:1rem;font-weight:700;color:var(--navy)" id="panelName">Tenant Name</div>
-        <span class="badge" id="panelStatus">Active</span>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <span class="badge" id="panelStatus">Active</span>
+          <span class="badge" id="panelMembershipBadge" style="display:none;font-size:0.65rem;"></span>
+        </div>
       </div>
     </div>
     <button class="modal-close" id="closePanelBtn"><i class="fas fa-times"></i></button>
   </div>
 
+  <div class="panel-body">
   <div class="panel-section" id="panelApprovalBanner" style="display:none;background:#fffbeb;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
       <div style="font-size:0.82rem;color:#92400e;"><i class="fas fa-hourglass-half" style="margin-right:6px;"></i>This booking is awaiting approval.</div>
@@ -188,8 +192,9 @@
     </div>
     <div id="panelPayments"></div>
   </div>
+  </div><!-- /panel-body -->
 
-  <div style="display:flex;gap:10px;padding:16px;border-top:1px solid var(--gray-100);margin-top:8px;">
+  <div class="panel-footer">
     <button class="btn btn-secondary" style="flex:1" id="panelMessageBtn"><i class="fas fa-envelope"></i> Message</button>
     <button class="btn btn-primary" style="flex:1" id="panelEditBtn"><i class="fas fa-edit"></i> Edit Tenant</button>
   </div>
@@ -273,6 +278,16 @@
             <option value="moveout">Moving Out</option>
             <option value="past">Past</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label>Membership / Booking Source</label>
+          <select id="atMembershipType">
+            <option value="standard">Standard (YardBoss)</option>
+            <option value="truck-parking-club">Truck Parking Club Member</option>
+            <option value="stackly">Stackly Member</option>
+            <option value="neighbor">Neighbor</option>
+          </select>
+          <span style="display:block;font-size:0.72rem;color:var(--gray-500);margin-top:4px;">Non-standard sources are informational and excluded from revenue</span>
         </div>
         <div class="form-group">
           <label>Start Date</label>
@@ -581,6 +596,15 @@
             <option value="Travel Trailer">Travel Trailer</option>
             <option value="Fifth Wheel">Fifth Wheel</option>
             <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Membership / Booking Source</label>
+          <select id="wiMembershipType">
+            <option value="standard">Standard (YardBoss)</option>
+            <option value="truck-parking-club">Truck Parking Club Member</option>
+            <option value="stackly">Stackly Member</option>
+            <option value="neighbor">Neighbor</option>
           </select>
         </div>
         <div class="form-group" style="grid-column:1/-1;">
