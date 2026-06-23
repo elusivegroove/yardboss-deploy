@@ -1,3 +1,115 @@
+var _rmSort = { col: -1, dir: 1 };
+var _rmFilter = '';
+
+function naturalSortSpace(s) {
+  if (!s) return 9999;
+  var m = String(s).match(/(\d+)/);
+  return m ? parseInt(m[1], 10) : 9999;
+}
+
+function renderReportCell(cellStr) {
+  if (cellStr === 'paid')         return '<span class="badge badge-green">Paid</span>';
+  if (cellStr === 'late')         return '<span class="badge badge-yellow">Late</span>';
+  if (cellStr === 'overdue')      return '<span class="badge badge-red">Overdue</span>';
+  if (cellStr === 'active')       return '<span class="badge badge-green">Active</span>';
+  if (cellStr === 'past')         return '<span class="badge badge-gray">Past</span>';
+  if (cellStr === 'confirmed')    return '<span class="badge badge-teal">Confirmed</span>';
+  if (cellStr === 'pending')      return '<span class="badge badge-yellow">Pending</span>';
+  if (cellStr === 'On Premises')  return '<span class="badge badge-green">On Premises</span>';
+  if (cellStr === 'Off Premises') return '<span class="badge badge-gray">Off Premises</span>';
+  if (cellStr === 'Completed')    return '<span class="badge badge-teal">Completed</span>';
+  if (cellStr === 'Scheduled')    return '<span class="badge badge-blue">Scheduled</span>';
+  if (cellStr === 'Ready')        return '<span class="badge badge-green">Ready</span>';
+  if (cellStr === 'Generated')    return '<span class="badge badge-teal">Generated</span>';
+  return cellStr;
+}
+
+function renderReportTbody(headers, allRows) {
+  var filter = _rmFilter.trim().toLowerCase();
+  var rows = filter ? allRows.filter(function (row) {
+    return row.some(function (c) {
+      return String(c == null ? '' : c).toLowerCase().indexOf(filter) !== -1;
+    });
+  }) : allRows.slice();
+
+  if (_rmSort.col >= 0) {
+    var col = _rmSort.col, dir = _rmSort.dir;
+    rows.sort(function (a, b) {
+      var av = String(a[col] == null ? '' : a[col]);
+      var bv = String(b[col] == null ? '' : b[col]);
+      var an = parseFloat(av.replace(/[^0-9.]/g, ''));
+      var bn = parseFloat(bv.replace(/[^0-9.]/g, ''));
+      if (!isNaN(an) && !isNaN(bn)) return (an - bn) * dir;
+      return av.localeCompare(bv) * dir;
+    });
+  }
+
+  var tbody = document.getElementById('rptTbody');
+  if (!tbody) return;
+  var html = '';
+  if (rows.length === 0) {
+    html = '<tr><td colspan="' + headers.length + '"><div class="empty-state"><i class="fas fa-inbox"></i><p>No results</p></div></td></tr>';
+  } else {
+    rows.forEach(function (row) {
+      html += '<tr>' + row.map(function (cell) {
+        return '<td>' + renderReportCell(String(cell == null ? '' : cell)) + '</td>';
+      }).join('') + '</tr>';
+    });
+  }
+  tbody.innerHTML = html;
+}
+
+function updateSortIcons() {
+  document.querySelectorAll('#reportModalContent .rpt-th').forEach(function (th, i) {
+    var icon = th.querySelector('.rpt-sort-icon');
+    if (!icon) return;
+    th.classList.remove('sort-asc', 'sort-desc');
+    icon.className = 'fas fa-sort rpt-sort-icon';
+    if (_rmSort.col === i) {
+      th.classList.add(_rmSort.dir === 1 ? 'sort-asc' : 'sort-desc');
+      icon.className = 'fas ' + (_rmSort.dir === 1 ? 'fa-sort-up' : 'fa-sort-down') + ' rpt-sort-icon';
+    }
+  });
+}
+
+function renderReportModalContent(headers, allRows) {
+  var content = document.getElementById('reportModalContent');
+  var theadHtml = '<tr>' + headers.map(function (h, i) {
+    return '<th class="rpt-th" data-col="' + i + '">' + h + ' <i class="fas fa-sort rpt-sort-icon"></i></th>';
+  }).join('') + '</tr>';
+
+  content.innerHTML =
+    '<div class="rpt-filter-bar">' +
+      '<i class="fas fa-search rpt-filter-icon"></i>' +
+      '<input id="rptFilterInput" type="text" class="rpt-filter-input" placeholder="Search all columns...">' +
+    '</div>' +
+    '<div class="table-wrapper"><table>' +
+      '<thead>' + theadHtml + '</thead>' +
+      '<tbody id="rptTbody"></tbody>' +
+    '</table></div>';
+
+  renderReportTbody(headers, allRows);
+
+  document.getElementById('rptFilterInput').addEventListener('input', function () {
+    _rmFilter = this.value;
+    renderReportTbody(headers, allRows);
+  });
+
+  content.querySelectorAll('.rpt-th').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var col = parseInt(this.getAttribute('data-col'), 10);
+      if (_rmSort.col === col) {
+        _rmSort.dir = _rmSort.dir === 1 ? -1 : 1;
+      } else {
+        _rmSort.col = col;
+        _rmSort.dir = 1;
+      }
+      updateSortIcons();
+      renderReportTbody(headers, allRows);
+    });
+  });
+}
+
 function formatCohortMonth(yearMonth) {
   const parts = yearMonth.split('-');
   const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
@@ -134,11 +246,14 @@ const FINANCIAL_REPORTS = [
     title: 'Tenant Contact Export',
     desc: 'Export tenant contact information',
     getData: function () {
-      const rows = APP_DATA.tenants.map(function (t) {
-        return [t.name, t.email, t.phone, t.company, getLotName(t.lotId), t.status];
+      var sorted = APP_DATA.tenants.slice().sort(function (a, b) {
+        return naturalSortSpace(a.spaceNumber) - naturalSortSpace(b.spaceNumber);
+      });
+      var rows = sorted.map(function (t) {
+        return [t.spaceNumber || '—', t.name, t.email, t.phone, t.company, getLotName(t.lotId), t.status];
       });
       return {
-        headers: ['Name', 'Email', 'Phone', 'Company', 'Lot', 'Status'],
+        headers: ['Space', 'Name', 'Email', 'Phone', 'Company', 'Lot', 'Status'],
         rows: rows
       };
     }
@@ -347,40 +462,12 @@ function openReportModal(reportId) {
   const report = allReports.find(function (r) { return r.id === reportId; });
   if (!report) return;
 
+  _rmSort = { col: -1, dir: 1 };
+  _rmFilter = '';
+
   document.getElementById('reportModalTitle').textContent = report.title;
-
   const data = report.getData();
-  let tableHtml = '<div class="table-wrapper"><table><thead><tr>' +
-    data.headers.map(function (h) { return '<th>' + h + '</th>'; }).join('') +
-    '</tr></thead><tbody>';
-
-  if (data.rows.length === 0) {
-    tableHtml += '<tr><td colspan="' + data.headers.length + '"><div class="empty-state"><i class="fas fa-inbox"></i><p>No data available</p></div></td></tr>';
-  } else {
-    data.rows.forEach(function (row) {
-      tableHtml += '<tr>' + row.map(function (cell) {
-        const cellStr = String(cell);
-        if (cellStr === 'paid') return '<td><span class="badge badge-green">Paid</span></td>';
-        if (cellStr === 'late') return '<td><span class="badge badge-yellow">Late</span></td>';
-        if (cellStr === 'overdue') return '<td><span class="badge badge-red">Overdue</span></td>';
-        if (cellStr === 'active') return '<td><span class="badge badge-green">Active</span></td>';
-        if (cellStr === 'past') return '<td><span class="badge badge-gray">Past</span></td>';
-        if (cellStr === 'confirmed') return '<td><span class="badge badge-teal">Confirmed</span></td>';
-        if (cellStr === 'pending') return '<td><span class="badge badge-yellow">Pending</span></td>';
-        if (cellStr === 'On Premises') return '<td><span class="badge badge-green">On Premises</span></td>';
-        if (cellStr === 'Off Premises') return '<td><span class="badge badge-gray">Off Premises</span></td>';
-        if (cellStr === 'Completed') return '<td><span class="badge badge-teal">Completed</span></td>';
-        if (cellStr === 'Scheduled') return '<td><span class="badge badge-blue">Scheduled</span></td>';
-        if (cellStr === 'Ready') return '<td><span class="badge badge-green">Ready</span></td>';
-        if (cellStr === 'Generated') return '<td><span class="badge badge-teal">Generated</span></td>';
-        return '<td>' + cellStr + '</td>';
-      }).join('') + '</tr>';
-    });
-  }
-
-  tableHtml += '</tbody></table></div>';
-  document.getElementById('reportModalContent').innerHTML = tableHtml;
-
+  renderReportModalContent(data.headers, data.rows);
   document.getElementById('reportModal').classList.add('open');
 }
 

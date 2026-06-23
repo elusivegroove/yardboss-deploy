@@ -392,6 +392,16 @@ input:checked + .toggle-slider:before { transform: translateX(20px); }
 .report-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
 .reports-right .card { position: sticky; top: calc(var(--nav-height) + var(--cmd-height) + 24px); }
 
+/* report modal — filter bar + sortable headers */
+.rpt-filter-bar { display: flex; align-items: center; gap: 8px; padding: 12px 20px 10px; border-bottom: 1px solid var(--gray-100); }
+.rpt-filter-icon { color: var(--gray-400); font-size: 0.85rem; flex-shrink: 0; }
+.rpt-filter-input { flex: 1; border: 1px solid var(--gray-200); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; color: var(--navy); outline: none; background: var(--white); }
+.rpt-filter-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0,180,160,0.15); }
+.rpt-th { cursor: pointer; user-select: none; }
+.rpt-th:hover { color: var(--teal); background: var(--gray-50); }
+.rpt-th.sort-asc .rpt-sort-icon, .rpt-th.sort-desc .rpt-sort-icon { color: var(--teal); }
+.rpt-sort-icon { font-size: 0.65rem; color: var(--gray-300); margin-left: 4px; vertical-align: middle; }
+
 /* quick glance */
 .quick-glance-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-100); font-size: 0.85rem; }
 .quick-glance-row:last-child { border-bottom: none; }
