@@ -134,7 +134,7 @@ const FINANCIAL_REPORTS = [
     title: 'Tenant Contact Export',
     desc: 'Export tenant contact information',
     getData: function () {
-      const rows = APP_DATA.tenants.slice(0, 8).map(function (t) {
+      const rows = APP_DATA.tenants.map(function (t) {
         return [t.name, t.email, t.phone, t.company, getLotName(t.lotId), t.status];
       });
       return {
@@ -425,7 +425,14 @@ document.addEventListener('DOMContentLoaded', function () {
     opCard.innerHTML = OPERATIONAL_REPORTS.map(renderReportCard).join('');
   }
 
-  renderQuickGlance();
+  if (typeof YB !== 'undefined' && YB.loadTenants) {
+    YB.loadTenants().then(function (tenants) {
+      APP_DATA.tenants = tenants;
+      renderQuickGlance();
+    }).catch(function () { renderQuickGlance(); });
+  } else {
+    renderQuickGlance();
+  }
 
   document.getElementById('closeReportModal').addEventListener('click', function () {
     document.getElementById('reportModal').classList.remove('open');
