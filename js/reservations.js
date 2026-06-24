@@ -1291,7 +1291,7 @@ async function handleWalkInSubmit(e) {
     lotId: lotId, spaceNumber: space, monthlyRate: rate, walkIn: true
   });
 
-  if (email) {
+  if (payments.length) {
     sendGateCodeEmail({ name: name, email: email }, { welcome: true });
   }
 
