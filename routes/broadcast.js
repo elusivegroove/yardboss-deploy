@@ -63,7 +63,7 @@ router.post('/', async (req, res) => {
       const html = buildPlainEmailHtml('TransVega Yard', body);
       const emailJobs = emailTargets.map(tenant =>
         transporter.sendMail({
-          from: `"TransVega Yard" <${process.env.SMTP_USER}>`,
+          from: `"TransVega Yard" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
           replyTo: process.env.SMTP_REPLY_TO || undefined,
           to: tenant.email,
           subject: subject || 'Message from TransVega RV & Truck Center',

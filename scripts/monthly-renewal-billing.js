@@ -90,7 +90,7 @@ async function sendEmail(to, subject, html) {
     return { mock: true };
   }
   await transporter.sendMail({
-    from: `"YardBoss — TransVega" <${process.env.SMTP_USER}>`,
+    from: `"YardBoss — TransVega" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
     replyTo: process.env.SMTP_REPLY_TO || undefined,
     to,
     subject,
@@ -186,7 +186,7 @@ async function runMonthlyRenewalBilling() {
     console.log('────────────────────────────────────────────────────────────────\n');
   } else {
     await transporter.sendMail({
-      from: `"YardBoss — TransVega" <${process.env.SMTP_USER}>`,
+      from: `"YardBoss — TransVega" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       replyTo: process.env.SMTP_REPLY_TO || undefined,
       to: RECIPIENTS.join(', '),
       subject: adminSubject,
