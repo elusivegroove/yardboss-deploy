@@ -574,16 +574,22 @@ function fmtUSD2(n) {
   return '$' + Number(n || 0).toFixed(2);
 }
 
-// Emails the current month's gate code (Settings → Gate Code) to a tenant
-// after a payment is recorded, so they always have the latest code. Silent
-// no-op if the tenant has no email on file or no gate code has been set.
+// Emails the current month's gate code (Settings → Gate Code) to a tenant.
+// No-op if the tenant has no email on file.
+// Shows a visible toast if gate code email fails (e.g. gate code not set in Settings).
 function sendGateCodeEmail(tenant, opts) {
   if (!tenant || !tenant.email) return;
   if (!window.YB || typeof YB.sendGateCodeEmail !== 'function') return;
   var payload = { to: tenant.email, tenantName: tenant.name };
   if (opts && opts.welcome) payload.welcome = true;
   YB.sendGateCodeEmail(payload).catch(function (err) {
-    console.warn('Could not send gate code email:', err && err.message);
+    var msg = err && err.message || 'Unknown error';
+    console.warn('Could not send gate code email:', msg);
+    if (msg.toLowerCase().includes('gate code')) {
+      showToast('Gate code email not sent — no gate code is set yet. Go to Settings → Gate Code to set one.', 'warning');
+    } else {
+      showToast('Gate code email failed: ' + msg, 'error');
+    }
   });
 }
 
@@ -1285,7 +1291,7 @@ async function handleWalkInSubmit(e) {
     lotId: lotId, spaceNumber: space, monthlyRate: rate, walkIn: true
   });
 
-  if (payments.length) {
+  if (email) {
     sendGateCodeEmail({ name: name, email: email }, { welcome: true });
   }
 
