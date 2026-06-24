@@ -53,6 +53,7 @@ async function sendEmail(to, subject, html) {
   }
   await transporter.sendMail({
     from: `"YardBoss — TransVega" <${process.env.SMTP_USER}>`,
+    replyTo: process.env.SMTP_REPLY_TO || undefined,
     to,
     subject,
     html,
@@ -134,6 +135,7 @@ async function runLateFeeCharges() {
   } else {
     await transporter.sendMail({
       from: `"YardBoss — TransVega" <${process.env.SMTP_USER}>`,
+      replyTo: process.env.SMTP_REPLY_TO || undefined,
       to: RECIPIENTS.join(', '),
       subject: adminSubject,
       html: adminHtml,

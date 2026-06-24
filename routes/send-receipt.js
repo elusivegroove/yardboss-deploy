@@ -37,6 +37,7 @@ router.post('/', async (req, res) => {
   try {
     await transporter.sendMail({
       from: `"YardBoss — TransVega" <${process.env.SMTP_USER}>`,
+      replyTo: process.env.SMTP_REPLY_TO || undefined,
       to,
       subject: subject || 'Your Receipt — TransVega RV & Truck Center',
       html
