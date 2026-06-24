@@ -7,6 +7,7 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
+const { notifyAdmin } = require('../lib/notify-admin');
 
 // ── Snake → camelCase row mapper ──────────────────────────────────────────────
 function rowToTenant(row) {
@@ -147,7 +148,22 @@ router.post('/', async (req, res) => {
       b.smsConsent || false,
       b.membershipType || 'standard'
     ]);
-    res.status(201).json(rowToTenant(result.rows[0]));
+    const tenant = rowToTenant(result.rows[0]);
+    const isWalkin = (b.status === 'active' && b.registrationStatus === 'pending') || b.walkIn;
+    notifyAdmin(
+      `${isWalkin ? 'New Walk-In' : 'New Tenant Added'} — ${tenant.name}`,
+      `<h2 style="margin-top:0;color:#0f1e3c;">${isWalkin ? 'Walk-In Check-In' : 'New Tenant Added'}</h2>
+       <p><strong>${tenant.name}</strong> has been added${isWalkin ? ' via walk-in check-in' : ' by staff'}.</p>
+       <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:0.95rem;">
+         <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Space</td><td><strong>${tenant.spaceNumber || '—'}</strong></td></tr>
+         <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Rate</td><td><strong>$${tenant.monthlyRate}/mo</strong></td></tr>
+         <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Email</td><td>${tenant.email || '—'}</td></tr>
+         <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Phone</td><td>${tenant.phone || '—'}</td></tr>
+         <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Vehicle</td><td>${tenant.vehicle?.type || '—'}</td></tr>
+       </table>
+       <p><a href="https://yardboss-deploy.vercel.app/reservations.html" style="color:#00b4a0;font-weight:600;">View in YardBoss →</a></p>`
+    ).catch(() => {});
+    res.status(201).json(tenant);
   } catch (err) {
     console.error('[tenants] POST / error:', err.message);
     res.status(500).json({ error: err.message });
@@ -229,7 +245,24 @@ router.patch('/:id', async (req, res) => {
       values
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Tenant not found' });
-    res.json(rowToTenant(result.rows[0]));
+    const updated = rowToTenant(result.rows[0]);
+
+    if (b.status === 'past' && b.moveOutDate) {
+      notifyAdmin(
+        `Move-Out Confirmed — ${updated.name}`,
+        `<h2 style="margin-top:0;color:#0f1e3c;">Tenant Move-Out</h2>
+         <p><strong>${updated.name}</strong> has been marked as moved out.</p>
+         <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:0.95rem;">
+           <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Space</td><td><strong>${updated.spaceNumber || '—'}</strong></td></tr>
+           <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Move-Out Date</td><td><strong>${b.moveOutDate}</strong></td></tr>
+           <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Email</td><td>${updated.email || '—'}</td></tr>
+           <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Phone</td><td>${updated.phone || '—'}</td></tr>
+         </table>
+         <p><a href="https://yardboss-deploy.vercel.app/reservations.html" style="color:#00b4a0;font-weight:600;">View in YardBoss →</a></p>`
+      ).catch(() => {});
+    }
+
+    res.json(updated);
   } catch (err) {
     console.error('[tenants] PATCH /:id error:', err.message);
     res.status(500).json({ error: err.message });

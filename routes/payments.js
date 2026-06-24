@@ -3,6 +3,7 @@ const router = express.Router();
 const { reservations } = require('./store');
 const { MOCK_SMTP, transporter, buildEmailHtml } = require('../lib/email');
 const { getGateCode, currentPeriodLabel, gateCodeEmailBody } = require('../lib/gate-code');
+const { notifyAdmin } = require('../lib/notify-admin');
 
 const MOCK = process.env.MOCK_PAYMENTS === 'true';
 const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -87,13 +88,29 @@ router.post('/confirm', async (req, res) => {
       activatedAt: new Date().toISOString(),
     });
 
+    const r = reservations[idx];
+
     // Email the current gate code to the new tenant now that their booking
     // and first payment are confirmed (Settings → Gate Code).
-    sendGateCodeWelcomeEmail(reservations[idx]).catch(err => {
+    sendGateCodeWelcomeEmail(r).catch(err => {
       console.error('[payments/confirm] gate code email error:', err.message);
     });
 
-    res.json({ success: true, reservation: reservations[idx] });
+    notifyAdmin(
+      `Payment Confirmed — ${r.tenantName}`,
+      `<h2 style="margin-top:0;color:#0f1e3c;">Portal Payment Confirmed</h2>
+       <p><strong>${r.tenantName}</strong>'s booking payment was confirmed. Their account is now active.</p>
+       <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:0.95rem;">
+         <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Space</td><td><strong>${r.spaceNumber || '—'}</strong></td></tr>
+         <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Rate</td><td><strong>$${r.monthlyRate}/mo</strong></td></tr>
+         <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Email</td><td>${r.email}</td></tr>
+         <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Phone</td><td>${r.phone || '—'}</td></tr>
+         <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Payment ID</td><td style="font-size:0.8rem;color:#64748b;">${paymentIntentId || '—'}</td></tr>
+       </table>
+       <p><a href="https://yardboss-deploy.vercel.app/reservations.html" style="color:#00b4a0;font-weight:600;">View in YardBoss →</a></p>`
+    ).catch(() => {});
+
+    res.json({ success: true, reservation: r });
   } catch (err) {
     console.error('confirm error:', err.message);
     res.status(500).json({ error: err.message });

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { lots, reservations, genResId } = require('./store');
+const { notifyAdmin } = require('../lib/notify-admin');
 
 // GET /api/reservations
 router.get('/', (req, res) => {
@@ -94,6 +95,21 @@ router.post('/', (req, res) => {
   };
 
   reservations.push(newRes);
+
+  notifyAdmin(
+    `New Booking Request — ${newRes.tenantName}`,
+    `<h2 style="margin-top:0;color:#0f1e3c;">New Portal Booking</h2>
+     <p><strong>${newRes.tenantName}</strong> just submitted a booking through the client portal and is awaiting approval.</p>
+     <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:0.95rem;">
+       <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Space Type</td><td><strong>${newRes.spaceType}</strong></td></tr>
+       <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Start Date</td><td><strong>${newRes.startDate}</strong></td></tr>
+       <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Rate</td><td><strong>$${newRes.monthlyRate}/mo</strong></td></tr>
+       <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Email</td><td>${newRes.email}</td></tr>
+       <tr><td style="padding:5px 12px 5px 0;color:#64748b;">Phone</td><td>${newRes.phone || '—'}</td></tr>
+     </table>
+     <p><a href="https://yardboss-deploy.vercel.app/reservations.html" style="color:#00b4a0;font-weight:600;">Review &amp; approve in YardBoss →</a></p>`
+  ).catch(() => {});
+
   res.status(201).json(newRes);
 });
 

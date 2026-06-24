@@ -21,7 +21,7 @@ const db = require('../db');
 const { MOCK_SMTP, transporter, buildEmailHtml } = require('../lib/email');
 
 const LATE_FEE_AMOUNT = 35;
-const RECIPIENTS = ['accounting1@transvegalogistics.com', 'sam.f@transvegalogistics.com'];
+const RECIPIENTS = ['accounting1@transvegalogistics.com', 'sam.f@transvegalogistics.com', 'sebring@transvegalogistics.com'];
 
 function formatCurrency(n) {
   return '$' + Number(n || 0).toFixed(2);

@@ -22,7 +22,7 @@ const { MOCK_SMTP, transporter, buildEmailHtml } = require('../lib/email');
 const { getGateCode, gateCodeEmailBody } = require('../lib/gate-code');
 
 const MOCK_PAYMENTS = process.env.MOCK_PAYMENTS === 'true';
-const RECIPIENTS = ['accounting1@transvegalogistics.com', 'sam.f@transvegalogistics.com'];
+const RECIPIENTS = ['accounting1@transvegalogistics.com', 'sam.f@transvegalogistics.com', 'sebring@transvegalogistics.com'];
 
 // Card processing surcharge applied to auto-pay (credit card on file) charges only.
 const CARD_SURCHARGE_RATE = 0.035;
