@@ -116,6 +116,13 @@ function openTenantPanel(tenantId) {
   var tenant = getTenant(tenantId);
   if (!tenant) return;
   _panelTenantId = tenantId;
+
+  // Wire up panel actions and open immediately so the panel and Edit button always
+  // work even if something in the rendering below unexpectedly throws.
+  document.getElementById('panelEditBtn').onclick = function() { openEditTenantModal(tenantId); };
+  document.getElementById('tenantPanel').classList.add('open');
+  document.getElementById('panelOverlay').classList.add('show');
+
   var globalIndex = APP_DATA.tenants.indexOf(tenant);
   var color = getAvatarColor(globalIndex);
   var lot = getLot(tenant.lotId);
@@ -378,7 +385,7 @@ function openTenantPanel(tenantId) {
       +'</div>'
       +'<div style="display:flex;align-items:center;gap:5px;">'
       +'<span style="font-weight:600;font-size:0.875rem;">'+formatCurrency(p.amount)+'</span>'
-      +'<span class="badge '+cls+'">'+p.status.charAt(0).toUpperCase()+p.status.slice(1)+'</span>'
+      +'<span class="badge '+cls+'">'+(p.status ? p.status.charAt(0).toUpperCase()+p.status.slice(1) : 'Paid')+'</span>'
       +'<button class="btn btn-secondary btn-sm btn-icon" title="Print Receipt" onclick="printPaymentReceipt(\''+tenantId+'\','+pi+')"><i class="fas fa-print"></i></button>'
       +'<button class="btn btn-secondary btn-sm btn-icon" title="Email Receipt" onclick="emailPaymentReceipt(\''+tenantId+'\','+pi+')"><i class="fas fa-envelope"></i></button>'
       +'</div></div>';
@@ -388,10 +395,6 @@ function openTenantPanel(tenantId) {
     || '<p style="color:var(--gray-400);font-size:0.82rem;padding:8px 0;">No ledger entries yet</p>';
 
   document.getElementById('panelMessageBtn').onclick = function() { openMessageModal(tenantId); };
-  document.getElementById('panelEditBtn').onclick = function() { openEditTenantModal(tenantId); };
-
-  document.getElementById('tenantPanel').classList.add('open');
-  document.getElementById('panelOverlay').classList.add('show');
 }
 
 function closeTenantPanel() {
