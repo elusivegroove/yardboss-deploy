@@ -196,6 +196,7 @@
 
   <div class="panel-footer">
     <button class="btn btn-secondary" style="flex:1" id="panelMessageBtn"><i class="fas fa-envelope"></i> Message</button>
+    <button class="btn btn-secondary" style="flex:1" id="panelSmsBtn"><i class="fas fa-sms"></i> Text</button>
     <button class="btn btn-primary" style="flex:1" id="panelEditBtn"><i class="fas fa-edit"></i> Edit Tenant</button>
   </div>
 </div>
@@ -483,6 +484,40 @@
     <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
       <button type="button" class="btn btn-secondary" id="cancelMsgModal">Cancel</button>
       <button type="button" class="btn btn-primary" id="sendMsgBtn"><i class="fas fa-paper-plane"></i> Send Message</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SMS Compose Modal ─────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="smsModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3 class="modal-title"><i class="fas fa-sms" style="margin-right:8px;color:var(--teal);"></i>Send Text Message</h3>
+      <button class="modal-close" id="closeSmsModal"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="background:var(--gray-50);border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:0.82rem;">
+      <span style="color:var(--gray-400);font-weight:600;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;">To:</span>
+      <span id="smsTenantName" style="font-weight:700;color:var(--navy);margin-left:6px;"></span>
+      <span id="smsTenantPhone" style="color:var(--gray-400);margin-left:6px;"></span>
+    </div>
+    <div id="smsNoConsentWarn" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:9px 12px;margin-bottom:14px;font-size:0.78rem;color:#92400e;">
+      <i class="fas fa-exclamation-triangle" style="margin-right:6px;"></i>This tenant hasn't given SMS consent. Send at your discretion.
+    </div>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:8px;">Quick Templates</div>
+      <div id="smsTplBtns" style="display:flex;flex-wrap:wrap;gap:6px;">
+        <span style="font-size:0.78rem;color:var(--gray-400);">Loading…</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Message *</label>
+      <textarea id="smsMsgBody" rows="4" placeholder="Type your message..." style="width:100%;resize:vertical;padding:10px;border:1px solid var(--gray-200);border-radius:6px;font-family:Inter,sans-serif;font-size:0.875rem;box-sizing:border-box;"></textarea>
+      <div style="font-size:0.72rem;color:var(--gray-400);margin-top:4px;"><span id="smsMsgCharCount">0</span> characters · <span id="smsMsgSegments">1</span> SMS segment(s)</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--gray-100);">
+      <button type="button" class="btn btn-primary" id="sendSmsBtn" style="min-width:120px;"><i class="fas fa-paper-plane"></i> Send Text</button>
+      <button type="button" class="btn btn-secondary" id="cancelSmsModal">Cancel</button>
+      <span id="smsSendFeedback" style="font-size:0.82rem;margin-left:auto;"></span>
     </div>
   </div>
 </div>

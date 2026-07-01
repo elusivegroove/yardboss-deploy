@@ -395,6 +395,7 @@ function openTenantPanel(tenantId) {
     || '<p style="color:var(--gray-400);font-size:0.82rem;padding:8px 0;">No ledger entries yet</p>';
 
   document.getElementById('panelMessageBtn').onclick = function() { openMessageModal(tenantId); };
+  document.getElementById('panelSmsBtn').onclick     = function() { openSmsModal(tenantId); };
 }
 
 function closeTenantPanel() {
@@ -876,6 +877,86 @@ function sendMessage() {
   if (!tenant.email) { showToast('This tenant has no email on file.','error'); return; }
   showToast('Message sent to '+tenant.name+' ('+tenant.email+')','success');
   document.getElementById('msgModal').classList.remove('open');
+}
+
+// ── SMS Modal (one-off text to a single tenant) ───────────────────────────
+var _smsTenantId = null;
+var _smsTemplates = null;
+
+function fillTplVars(body, tenant) {
+  var vars = {
+    name:         tenant.name || 'there',
+    space:        tenant.spaceNumber || '—',
+    gate_code:    '(see Settings → Gate Code)',
+    renewal_date: tenant.dueDate   ? formatDate(tenant.dueDate)          : '—',
+    amount:       tenant.monthlyRate != null ? String(tenant.monthlyRate) : '0',
+    moveout_date: tenant.endDate   ? formatDate(tenant.endDate)           : '—',
+    expiry_date:  tenant.insuranceExpiry ? formatDate(tenant.insuranceExpiry) : '—',
+  };
+  return body.replace(/\{\{(\w+)\}\}/g, function(_, key) {
+    return vars[key] !== undefined ? vars[key] : '{{' + key + '}}';
+  });
+}
+
+function renderSmsTplBtns(container, tenant) {
+  var TPL_ORDER = ['gate_code','welcome','payment_received','payment_past_due','renewal_30','renewal_7','moveout_reminder','insurance_expiring'];
+  container.innerHTML = '';
+  TPL_ORDER.forEach(function(key) {
+    var tpl = _smsTemplates[key];
+    if (!tpl) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = tpl.name;
+    btn.style.cssText = 'padding:4px 10px;border-radius:99px;border:1.5px solid var(--gray-200);background:#fff;color:var(--gray-600);font-size:0.75rem;font-weight:500;cursor:pointer;';
+    btn.addEventListener('mouseenter', function(){ this.style.borderColor='var(--teal)'; this.style.color='var(--teal)'; });
+    btn.addEventListener('mouseleave', function(){ this.style.borderColor='var(--gray-200)'; this.style.color='var(--gray-600)'; });
+    btn.addEventListener('click', function() {
+      var ta = document.getElementById('smsMsgBody');
+      ta.value = fillTplVars(tpl.body, tenant);
+      ta.dispatchEvent(new Event('input'));
+      ta.focus();
+    });
+    container.appendChild(btn);
+  });
+  if (!container.children.length) {
+    container.innerHTML = '<span style="font-size:0.78rem;color:var(--gray-400);">No templates</span>';
+  }
+}
+
+function openSmsModal(tenantId) {
+  var tenant = getTenant(tenantId);
+  if (!tenant) return;
+  if (!tenant.phone) { showToast('This tenant has no phone number on file.', 'error'); return; }
+  _smsTenantId = tenantId;
+  document.getElementById('smsTenantName').textContent  = tenant.name;
+  document.getElementById('smsTenantPhone').textContent = tenant.phone;
+  document.getElementById('smsNoConsentWarn').style.display = tenant.smsConsent ? 'none' : 'block';
+  document.getElementById('smsMsgBody').value = '';
+  document.getElementById('smsMsgCharCount').textContent = '0';
+  document.getElementById('smsMsgSegments').textContent  = '1';
+  document.getElementById('smsSendFeedback').textContent = '';
+  var btn = document.getElementById('sendSmsBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Text';
+
+  var btnContainer = document.getElementById('smsTplBtns');
+  if (_smsTemplates) {
+    renderSmsTplBtns(btnContainer, tenant);
+  } else {
+    btnContainer.innerHTML = '<span style="font-size:0.78rem;color:var(--gray-400);">Loading…</span>';
+    fetch('/api/sms-templates')
+      .then(function(r) { return r.json(); })
+      .then(function(tpls) {
+        _smsTemplates = tpls;
+        renderSmsTplBtns(btnContainer, tenant);
+      })
+      .catch(function() {
+        btnContainer.innerHTML = '<span style="font-size:0.78rem;color:var(--gray-400);">Could not load templates</span>';
+      });
+  }
+
+  document.getElementById('smsModal').classList.add('open');
+  setTimeout(function() { document.getElementById('smsMsgBody').focus(); }, 80);
 }
 
 // ── Insurance File Handling ───────────────────────────────────────────────
@@ -1470,6 +1551,49 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('closeMsgModal').addEventListener('click', function(){ document.getElementById('msgModal').classList.remove('open'); });
   document.getElementById('cancelMsgModal').addEventListener('click', function(){ document.getElementById('msgModal').classList.remove('open'); });
   document.getElementById('msgModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+
+  // SMS modal
+  document.getElementById('smsMsgBody').addEventListener('input', function() {
+    var len = this.value.length;
+    document.getElementById('smsMsgCharCount').textContent = len;
+    document.getElementById('smsMsgSegments').textContent  = Math.ceil(len / 160) || 1;
+  });
+  document.getElementById('sendSmsBtn').addEventListener('click', function() {
+    var body = document.getElementById('smsMsgBody').value.trim();
+    var feedback = document.getElementById('smsSendFeedback');
+    if (!body) { feedback.style.color = '#dc2626'; feedback.textContent = 'Enter a message first.'; return; }
+    if (!_smsTenantId) return;
+    var tenant = getTenant(_smsTenantId);
+    if (!tenant) return;
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+    feedback.textContent = '';
+    fetch('/api/sms/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: tenant.phone, body: body })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.error) throw new Error(res.error);
+      feedback.style.color = '#16a34a';
+      feedback.innerHTML = res.mock
+        ? '<i class="fas fa-info-circle"></i> Mock — not sent (no Twilio keys)'
+        : '<i class="fas fa-check-circle"></i> Delivered!';
+      btn.innerHTML = '<i class="fas fa-check"></i> Sent!';
+      setTimeout(function() { document.getElementById('smsModal').classList.remove('open'); }, 1800);
+    })
+    .catch(function(err) {
+      feedback.style.color = '#dc2626';
+      feedback.textContent = 'Failed: ' + (err.message || 'Unknown error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Text';
+    });
+  });
+  document.getElementById('closeSmsModal').addEventListener('click', function(){ document.getElementById('smsModal').classList.remove('open'); });
+  document.getElementById('cancelSmsModal').addEventListener('click', function(){ document.getElementById('smsModal').classList.remove('open'); });
+  document.getElementById('smsModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
 
   // Export button
   var exportBtn = document.getElementById('exportTenantsBtn');
