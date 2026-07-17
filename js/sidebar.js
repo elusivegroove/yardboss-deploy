@@ -63,10 +63,19 @@ const NAV_HTML = `
         <button class="theme-opt" data-theme="midnight"><i class="fas fa-star"></i> Midnight</button>
       </div>
     </div>
-    <button class="nav-bell" title="Notifications">
-      <i class="fas fa-bell"></i>
-      <span class="nav-bell-badge">3</span>
-    </button>
+    <div class="nav-bell-wrap">
+      <button class="nav-bell" id="navBell" title="Notifications">
+        <i class="fas fa-bell"></i>
+        <span class="nav-bell-badge" id="navBellBadge" style="display:none;">0</span>
+      </button>
+      <div class="yb-notif-panel" id="ybNotifPanel">
+        <div class="yb-notif-head">
+          <span class="yb-notif-title">Notifications</span>
+          <button class="yb-notif-mark-all" id="ybNotifMarkAll">Mark all read</button>
+        </div>
+        <div class="yb-notif-list" id="ybNotifList"></div>
+      </div>
+    </div>
     <a href="/lots.html" class="btn-add-lot btn">
       <i class="fas fa-plus"></i><span>Add Lot</span>
     </a>
@@ -587,6 +596,99 @@ window.YBTheme = {
       this.style.height = Math.min(this.scrollHeight, 80) + 'px';
     });
   })();
+
+  // ── Notifications ─────────────────────────────────────────
+  var _notifOpen = false;
+  var _notifRead = JSON.parse(localStorage.getItem('yb-notif-read') || 'false');
+
+  function buildNotifications() {
+    var items = [];
+    if (typeof APP_DATA !== 'undefined' && APP_DATA.tenants) {
+      var tenants = APP_DATA.tenants;
+      var pending = tenants.filter(function(t){ return t.status === 'pending'; });
+      if (pending.length) {
+        items.push({ type: 'warning', icon: 'fa-hourglass-half', text: pending.length + ' booking' + (pending.length > 1 ? 's' : '') + ' awaiting your approval', href: '/reservations.html' });
+      }
+      var zeroRate = tenants.filter(function(t){ return t.status === 'active' && (!t.monthlyRate || t.monthlyRate === 0); });
+      if (zeroRate.length) {
+        items.push({ type: 'error', icon: 'fa-dollar-sign', text: zeroRate.length + ' active tenant' + (zeroRate.length > 1 ? 's have' : ' has') + ' no monthly rate set', href: '/reservations.html' });
+      }
+      var today = new Date();
+      var in30 = new Date(today); in30.setDate(in30.getDate() + 30);
+      var expiring = tenants.filter(function(t){
+        if (!t.insuranceExpDate) return false;
+        var d = new Date(t.insuranceExpDate);
+        return d >= today && d <= in30;
+      });
+      if (expiring.length) {
+        items.push({ type: 'warning', icon: 'fa-shield-alt', text: expiring.length + ' insurance doc' + (expiring.length > 1 ? 's' : '') + ' expiring within 30 days', href: '/reservations.html' });
+      }
+      var moveouts = tenants.filter(function(t){ return t.status === 'moveout'; });
+      if (moveouts.length) {
+        items.push({ type: 'info', icon: 'fa-dolly', text: moveouts.length + ' tenant' + (moveouts.length > 1 ? 's are' : ' is') + ' in move-out status', href: '/reservations.html' });
+      }
+    }
+    if (!items.length) {
+      items.push({ type: 'success', icon: 'fa-check-circle', text: 'All caught up — no pending items' });
+    }
+    return items;
+  }
+
+  function renderNotifications() {
+    var list    = document.getElementById('ybNotifList');
+    var badge   = document.getElementById('navBellBadge');
+    if (!list) return;
+    var items   = buildNotifications();
+    var urgentCount = _notifRead ? 0 : items.filter(function(i){ return i.type === 'warning' || i.type === 'error'; }).length;
+    if (badge) {
+      badge.textContent = urgentCount;
+      badge.style.display = urgentCount > 0 ? 'flex' : 'none';
+    }
+    list.innerHTML = items.map(function(n) {
+      var colors = { warning: '#f59e0b', error: '#ef4444', info: 'var(--teal)', success: '#16a34a' };
+      var col = colors[n.type] || 'var(--teal)';
+      return '<div class="yb-notif-item' + (n.href ? ' yb-notif-clickable' : '') + '"' + (n.href ? ' data-href="' + n.href + '"' : '') + '>'
+        + '<div class="yb-notif-icon"><i class="fas ' + n.icon + '" style="color:' + col + ';"></i></div>'
+        + '<div class="yb-notif-text">' + n.text + '</div>'
+        + '</div>';
+    }).join('');
+    list.querySelectorAll('.yb-notif-clickable').forEach(function(el) {
+      el.addEventListener('click', function(){ window.location.href = this.dataset.href; });
+    });
+  }
+
+  var navBell    = document.getElementById('navBell');
+  var notifPanel = document.getElementById('ybNotifPanel');
+
+  if (navBell) {
+    navBell.addEventListener('click', function(e) {
+      e.stopPropagation();
+      _notifOpen = !_notifOpen;
+      if (notifPanel) notifPanel.classList.toggle('open', _notifOpen);
+      if (_notifOpen) { _notifRead = false; localStorage.removeItem('yb-notif-read'); renderNotifications(); }
+    });
+  }
+
+  var markAllBtn = document.getElementById('ybNotifMarkAll');
+  if (markAllBtn) {
+    markAllBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      _notifRead = true;
+      localStorage.setItem('yb-notif-read', 'true');
+      renderNotifications();
+    });
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!_notifOpen) return;
+    if (notifPanel && !notifPanel.contains(e.target) && navBell && !navBell.contains(e.target)) {
+      _notifOpen = false;
+      notifPanel.classList.remove('open');
+    }
+  });
+
+  // Initialize badge after APP_DATA may have loaded
+  setTimeout(renderNotifications, 300);
 
   // ── Theme picker ──────────────────────────────────────────
   var currentTheme = localStorage.getItem('yb-theme') || 'light';
