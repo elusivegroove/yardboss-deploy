@@ -18,7 +18,6 @@
     <span class="nav-logo-text">YardBoss</span>
   </a>
   <div class="nav-links">
-    <a href="#lots" class="nav-link">Available Lots</a>
     <a href="#how" class="nav-link">How It Works</a>
     <a href="lookup.html" class="nav-link">My Reservation</a>
     <a href="../index.html" class="nav-link" target="_blank">Admin</a>
@@ -29,18 +28,19 @@
 <!-- Hero -->
 <section class="hero">
   <div class="hero-content">
+    <div class="hero-logo">
+      <img src="img/transvega-rvtruck-logo.png" alt="TransVega RV & Truck Center">
+    </div>
     <div class="hero-badge"><i class="fas fa-shield-check"></i> Secure & Easy Online Booking</div>
     <h1>Your <span>Truck & RV</span><br>Yard Space,<br>Booked in Minutes</h1>
-    <p>Reserve commercial parking, long-term storage, and RV hookup spaces at our Texas yard locations. Monthly rates, flexible leases, 24/7 access.</p>
+    <p>Reserve commercial parking, long-term storage, and RV hookup spaces at our Texas yard. Monthly rates, flexible leases, 24/7 access.</p>
     <div class="hero-cta">
       <a href="book.html" class="btn-primary"><i class="fas fa-calendar-check"></i> Reserve a Space</a>
-      <a href="#lots" class="btn-outline"><i class="fas fa-map-marker-alt"></i> View Locations</a>
     </div>
     <div class="hero-stats" id="heroStats">
-      <div class="hero-stat"><div class="hero-stat-value">405</div><div class="hero-stat-label">Total Spaces</div></div>
-      <div class="hero-stat"><div class="hero-stat-value">3</div><div class="hero-stat-label">Yard Locations</div></div>
-      <div class="hero-stat"><div class="hero-stat-value">$165</div><div class="hero-stat-label">Starting / Month</div></div>
       <div class="hero-stat"><div class="hero-stat-value">24/7</div><div class="hero-stat-label">Secure Access</div></div>
+      <div class="hero-stat"><div class="hero-stat-value"><i class="fas fa-shield-alt"></i></div><div class="hero-stat-label">Gated & Monitored</div></div>
+      <div class="hero-stat"><div class="hero-stat-value"><i class="fas fa-bolt"></i></div><div class="hero-stat-label">Electric Hookups</div></div>
     </div>
   </div>
 </section>
@@ -52,43 +52,24 @@
     <p class="section-sub">From selection to move-in in three simple steps</p>
     <div class="how-grid">
       <div class="how-card">
-        <div class="how-icon"><i class="fas fa-search-location"></i></div>
-        <h4>1. Choose a Yard</h4>
-        <p>Browse our available locations across Texas. Filter by city, space type, or amenities.</p>
-      </div>
-      <div class="how-card">
         <div class="how-icon"><i class="fas fa-clipboard-list"></i></div>
-        <h4>2. Complete Booking</h4>
+        <h4>1. Complete Booking</h4>
         <p>Fill in your contact info, vehicle details, and preferred start date. We auto-assign your space.</p>
       </div>
       <div class="how-card">
         <div class="how-icon"><i class="fas fa-credit-card"></i></div>
-        <h4>3. Pay Securely</h4>
+        <h4>2. Pay Securely</h4>
         <p>First month's payment is processed via Stripe. Move in on your start date with gate access code.</p>
       </div>
       <div class="how-card">
         <div class="how-icon"><i class="fas fa-key"></i></div>
-        <h4>4. Move In</h4>
+        <h4>3. Move In</h4>
         <p>Receive your space number, gate PIN, and welcome packet by email. You're all set!</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Available Lots -->
-<section class="section" id="lots">
-  <div class="container">
-    <h2 class="section-title">Available Locations</h2>
-    <p class="section-sub">Click any yard to view details and book your space</p>
-    <div class="lots-grid" id="lotsGrid">
-      <!-- Loaded by portal.js -->
-      <div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--gray-400);">
-        <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;"></i>
-        <p style="margin-top:8px;">Loading locations...</p>
-      </div>
-    </div>
-  </div>
-</section>
 
 <!-- Features -->
 <section class="section" style="background: white;">
@@ -141,9 +122,9 @@
 
 <!-- Footer -->
 <footer class="portal-footer">
-  <div class="footer-logo"><img src="/images/transvega-logo.png" alt="TransVega RV and Truck Center"> YardBoss</div>
-  <p>TransVega RV and Truck Center · 7406 HWY 27 North, Sebring, FL 33870 · <a href="tel:+18634413444">(863) 441-3444</a> · <a href="mailto:sebring@transvegatruckcenter.com">sebring@transvegatruckcenter.com</a></p>
-  <p style="margin-top: 8px; font-size: 0.72rem;">© 2026 YardBoss. All rights reserved. | <a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms of Service</a></p>
+  <div class="footer-logo"><i class="fas fa-truck"></i> YardBoss</div>
+  <p>Thompson Yard Management LLC · Houston, TX · <a href="tel:+17135550142">(713) 555-0142</a> · <a href="mailto:info@yardboss.com">info@yardboss.com</a></p>
+  <p style="margin-top: 8px; font-size: 0.72rem;">© 2025 YardBoss. All rights reserved. | <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a></p>
 </footer>
 
 <div class="toast" id="toast"></div>
