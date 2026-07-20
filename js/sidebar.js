@@ -87,7 +87,7 @@ const NAV_HTML = `
 </nav>
 
 <!-- Share Portal Modal -->
-<div class="modal-backdrop" id="sharePortalModal" style="display:none; z-index:1100;" onclick="if(event.target===this)closeSharePortal()">
+<div class="modal-backdrop" id="sharePortalModal" style="z-index:1100;" onclick="if(event.target===this)closeSharePortal()">
   <div class="modal" style="max-width:420px; padding:28px 28px 24px;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
       <div>
@@ -760,16 +760,17 @@ window.YBTheme = {
 var PORTAL_URL = 'https://yardboss-deploy.vercel.app/portal/';
 
 function openSharePortal() {
-  document.getElementById('sharePortalModal').style.display = 'flex';
+  var modal = document.getElementById('sharePortalModal');
+  modal.classList.add('open');
   document.getElementById('shareClientName').value = '';
   document.getElementById('sharePhone').value = '';
   document.getElementById('shareEmail').value = '';
   document.getElementById('sharePortalStatus').innerHTML = '';
-  document.getElementById('shareClientName').focus();
+  setTimeout(function() { document.getElementById('shareClientName').focus(); }, 50);
 }
 
 function closeSharePortal() {
-  document.getElementById('sharePortalModal').style.display = 'none';
+  document.getElementById('sharePortalModal').classList.remove('open');
 }
 
 function copyPortalLink() {
