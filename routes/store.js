@@ -11,7 +11,7 @@ const lots = [
     city: 'Sebring', state: 'FL', zip: '33870',
     totalSpaces: 140,
     status: 'active',
-    amenities: ['24/7 Gated Access', 'Security Cameras', 'Full Hookups (30/50 Amp)', 'Water & Sewer', 'WiFi Available', 'Dump Station', 'Truck Wash Bay', 'Restrooms', 'Laundry', 'On-Site Manager', 'Paved Surfaces', 'Lighting'],
+    amenities: ['24/7 Gated Access', 'Security Cameras', 'Propane Service', 'Dump Station', 'Trailer Washouts', 'Wash & Detailing', 'AC Waiting Area', 'Restrooms', 'On-Site Manager', 'Paved Surfaces', 'Lighting'],
     spaceTypes: ['RV Space', 'Semi Truck', 'Box Truck', 'Fifth Wheel'],
     monthlyRates: { 'RV Space': 350, 'Semi Truck': 425, 'Box Truck': 375, 'Fifth Wheel': 325 },
     pricingPlans: {

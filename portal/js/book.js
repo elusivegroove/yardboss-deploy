@@ -59,7 +59,7 @@ function populatePricingPlans(spaceType) {
   const sel = document.getElementById('pricingPlanSelect');
   let html = '';
   plans.forEach(plan => {
-    html += `<option value="${plan.id}">${plan.label} — $${plan.price.toFixed(2)}${rateUnitSuffix(plan.unit)}</option>`;
+    html += `<option value="${plan.id}">${plan.label} — $${plan.price.toFixed(2)}</option>`;
   });
   html += '<option value="custom">Custom Amount...</option>';
   sel.innerHTML = html;
@@ -298,6 +298,7 @@ function validateStep(step) {
     if (!name) { showToast('Please enter your full name.', 'error'); return false; }
     if (!email || !email.includes('@')) { showToast('Please enter a valid email address.', 'error'); return false; }
     if (!phone) { showToast('Please enter your phone number.', 'error'); return false; }
+    if (!document.getElementById('smsConsent').checked) { showToast('You must agree to receive text messages to continue.', 'error'); return false; }
     state.tenantName = name;
     state.email = email;
     state.phone = phone;
@@ -414,7 +415,21 @@ async function submitPayment() {
     const confirmed = await confirmRes.json();
     if (!confirmRes.ok) throw new Error(confirmed.error || 'Payment confirmation failed');
 
-    // 4. Save to sessionStorage and redirect to confirm page
+    // 4. Send gate code via email + SMS
+    try {
+      await fetch('/api/gate-code/email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: state.email, tenantName: state.tenantName, welcome: true })
+      });
+      if (state.smsConsent && state.phone) {
+        await fetch('/api/gate-code/sms', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: state.phone, tenantName: state.tenantName })
+        });
+      }
+    } catch(e) { /* non-fatal */ }
+
+    // 5. Save to sessionStorage and redirect to confirm page
     sessionStorage.setItem('yb_confirm', JSON.stringify({
       ...confirmed.reservation,
       lotName: state.lotName,

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { lots, reservations, genResId } = require('./store');
 const { notifyAdmin } = require('../lib/notify-admin');
+const db = require('../db');
 
 // GET /api/reservations
 router.get('/', (req, res) => {
@@ -95,6 +96,35 @@ router.post('/', (req, res) => {
   };
 
   reservations.push(newRes);
+
+  // Persist to PostgreSQL tenants table so portal lookup can find it
+  if (process.env.DATABASE_URL) {
+    db.query(`
+      INSERT INTO tenants (
+        id, lot_id, name, email, phone, company, space_number, monthly_rate,
+        start_date, end_date, status, registration_status, vehicle, sms_consent,
+        payments, additional_spaces
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+      ON CONFLICT (id) DO NOTHING
+    `, [
+      newRes.id,
+      newRes.lotId,
+      newRes.tenantName,
+      newRes.email,
+      newRes.phone,
+      newRes.company,
+      newRes.spaceNumber,
+      newRes.monthlyRate,
+      newRes.startDate,
+      newRes.endDate,
+      'pending',
+      'pending',
+      JSON.stringify({ make: newRes.vehicleMake, model: newRes.vehicleModel, year: newRes.vehicleYear, plate: newRes.vehiclePlate, type: newRes.spaceType }),
+      newRes.smsConsent,
+      '[]',
+      '[]',
+    ]).catch(err => console.error('[reservations] DB persist error:', err.message));
+  }
 
   notifyAdmin(
     `New Booking Request — ${newRes.tenantName}`,
