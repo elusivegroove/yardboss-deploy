@@ -262,7 +262,17 @@ function handleEditLotSubmit(e) {
 }
 
 // ── DOMContentLoaded ──────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+  if (typeof YB !== 'undefined') {
+    try {
+      var tenants = await YB.loadTenants();
+      APP_DATA.tenants = tenants;
+      var lots = await YB.loadLots();
+      if (lots && lots.length) APP_DATA.lots = lots;
+    } catch (err) {
+      console.warn('[YardBoss] API unavailable, using static data:', err.message);
+    }
+  }
   renderLotsTable('');
 
   // Search

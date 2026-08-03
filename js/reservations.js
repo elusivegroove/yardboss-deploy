@@ -87,7 +87,7 @@ function renderTenantsTable() {
     var approvalActions = t.status === 'pending'
       ? '<button class="btn btn-secondary btn-sm btn-icon" title="Approve Booking" style="color:#16a34a;" onclick="approveTenant(\''+t.id+'\')"><i class="fas fa-check"></i></button>'
         + '<button class="btn btn-secondary btn-sm btn-icon" title="Reject Booking" style="color:#ef4444;" onclick="openRejectModal(\''+t.id+'\')"><i class="fas fa-ban"></i></button>'
-      : (t.registrationStatus !== 'verified'
+      : (t.registrationStatus !== 'verified' && t.status !== 'past'
         ? '<button class="btn btn-secondary btn-sm btn-icon" title="Mark Registration Verified" style="color:#16a34a;" onclick="verifyRegistration(\''+t.id+'\')"><i class="fas fa-check"></i></button>'
         : '');
     return '<tr style="'+rowStyle+'" onclick="openTenantPanel(\''+t.id+'\')">'
@@ -170,7 +170,7 @@ function openTenantPanel(tenantId) {
 
   // Verify registration banner (active tenants with unverified registration)
   var verifyBanner = document.getElementById('panelVerifyBanner');
-  if (tenant.status !== 'pending' && tenant.registrationStatus !== 'verified') {
+  if (tenant.status !== 'pending' && tenant.status !== 'past' && tenant.registrationStatus !== 'verified') {
     verifyBanner.style.display = '';
     document.getElementById('panelVerifyBtn').onclick = function(){ verifyRegistration(tenantId); };
   } else {
@@ -1410,7 +1410,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     var tenants = await YB.loadTenants();
     APP_DATA.tenants = tenants;
     var lots = await YB.loadLots();
-    if (lots && lots.length) APP_DATA.lots = lots;
+    if (lots && lots.length) {
+      // Preserve static pricingPlans if the DB lot has none configured yet
+      APP_DATA.lots = lots.map(function(apiLot) {
+        var staticLot = (APP_DATA.lots || []).find(function(s){ return s.id === apiLot.id; });
+        if (staticLot && staticLot.pricingPlans && Object.keys(staticLot.pricingPlans).length &&
+            (!apiLot.pricingPlans || !Object.keys(apiLot.pricingPlans).length)) {
+          apiLot.pricingPlans = staticLot.pricingPlans;
+        }
+        return apiLot;
+      });
+    }
   } catch (err) {
     console.warn('[YardBoss] API unavailable, using static data:', err.message);
   }
