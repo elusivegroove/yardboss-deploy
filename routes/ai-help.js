@@ -29,6 +29,7 @@ Open modal — Tenants page only (include requiresPage:"reservations"):
 {"type":"fn","label":"Walk-In Check-In","fn":"openWalkInModal","requiresPage":"reservations"}
 {"type":"fn","label":"Send Broadcast","fn":"openBroadcastModal","requiresPage":"reservations"}
 {"type":"fn","label":"Bulk Update Period","fn":"openBulkPeriodModal","requiresPage":"reservations"}
+{"type":"fn","label":"Verify All Registrations","fn":"verifyAllRegistrations","requiresPage":"reservations"}
 
 Active tenant actions (include requiresContext:"activeTenant" — only shown when a tenant panel is open):
 {"type":"fn","label":"Verify Registration","fn":"verifyRegistration","args":["{activeTenantId}"],"requiresContext":"activeTenant"}
@@ -51,22 +52,24 @@ Action selection rules:
 ## PAGES & FEATURES
 
 ### Dashboard (/index.html)
-- 6 KPI tiles: Total Tenants, Occupancy Rate, Monthly Revenue, Receivables Due, Renewals This Month, Auto-Pay Active
+- 8 KPI tiles: Total Spaces, Vacant Spaces, Move-Outs (7d), Receivables Due (clickable), Monthly Revenue, Occupancy Rate, Renewals Due, Auto-Pay Active
 - 4 charts: Revenue (bar), Lot Occupancy (donut), Avg Rate by Type (bar), Occupancy Trend (line)
 - Booking Mix widget: donut chart + breakdown showing Active / Pending / Moving Out / Vacant space counts
 - Upcoming Renewals table: tenants renewing soon
 - Receivables Due tile is clickable — opens a modal listing all tenants with outstanding balances and payment links
 - Walk-In Check-In (teal button) and Add Tenant buttons in the greeting row
+- Occupancy numbers on Dashboard and Manage Lots are in sync — both load live data from the database
 
 ### Tenants & Reservations (/reservations.html)
 - Tab filters: All / Active / Pending Approval / Move-Outs / Past
-- Search bar: filters by name, company, email, space, plate
+- Search bar: filters by name, company, email, phone
 - Click any row → opens the slide panel with the tenant's full profile
-- **Add Tenant**: "Add Tenant" button → modal with Name, Lot, Space, Vehicle Type, Pricing Plan or manual Rate, Start/End Date, Email, Phone, SMS consent checkbox, Additional Spaces
-- **Walk-In Check-In**: teal bolt button → fast registration modal (no insurance/autopay setup)
+- **Add Tenant**: "Add Tenant" button → modal with Name, Lot, Space, Vehicle Type, Pricing Plan (pulls live rates from Settings) or manual Rate, Start/End Date, Email, Phone, SMS consent, Additional Spaces
+- **Walk-In Check-In**: teal bolt button → fast registration modal. Pricing plan dropdown pulls Semi Truck and RV rates from Settings → Pricing Plans. If no plan is selected, enter the rate manually in the Rate field.
 - **Edit tenant**: open slide panel → click the pencil/edit icon at the top
-- **Approving a pending tenant**: Pending Approval tab → green ✓ icon in the row, or slide panel approval banner
-- **Verify Registration**: Active tenants with unverified registration show a green checkmark icon in the Actions column. Opening the slide panel shows a green "Registration not yet verified" banner with a "Mark Verified" button.
+- **Approving a pending tenant**: Pending Approval tab → green ✓ icon in the row, or slide panel approval banner. Approving automatically sets registration to Verified.
+- **Verify Registration**: Active and Move-Out tenants with unverified registration show a green checkmark (✓) icon in the Actions column. Past tenants do NOT show this icon. The slide panel also shows a green "Registration not yet verified" banner with a "Mark Verified" button for active/moveout tenants only. Clicking verify saves to the database and refreshes the list — if it shows an error toast, the database save failed.
+- **Verify All**: green "Verify All" button in the toolbar — verifies every active and move-out tenant whose registration is still pending in a single operation. Shows a summary toast with how many were verified.
 - **Reject pending tenant**: red ✗ icon in the row → enter a rejection reason
 - **Move-Out**: slide panel → Move-Out section → "Initiate Move-Out" (date) → later "Confirm Move-Out" sets status to Past
 - **Price Lock**: slide panel → Lot Assignment section → toggle to lock a tenant's rate
@@ -80,7 +83,7 @@ Action selection rules:
 - **Import**: "Import" button → drag-and-drop Excel/CSV with auto-detect columns + 2-step preview
 - **Export**: "Export" button → CSV of all tenants
 - **Bulk Update Period**: purple button → set Start/End Date for all Active or All tenants at once
-- **Broadcast**: "Broadcast" button → send Email and/or SMS to filtered tenants. Only SMS-consented tenants receive texts.
+- **Broadcast**: "Broadcast" button → send Email and/or SMS to filtered tenants (Active, All, or Pending). Defaults to Active tenants. Only SMS-consented tenants receive texts.
 
 ### Billing Center (/billing.html)
 - KPI strip: Total Receivables, Tenants Past Due, Collected This Month, Auto-Pay Active
@@ -88,7 +91,8 @@ Action selection rules:
 
 ### Manage Lots (/lots.html)
 - Add/Edit Lot: name, address, amenities (15 checkboxes), total spaces
-- Space Map: visual grid of all spaces colored by status
+- Occupancy numbers (occupied / reserved / vacant) are loaded live from the database — they match the Dashboard occupancy figures
+- Space Map: visual grid of all spaces colored by status (occupied = teal, reserved = yellow, vacant = gray)
 - Rent Roll: all occupied spaces with tenant names and rates; CSV export
 - QR Code: QR linking to the client portal for this lot
 - Preview: portal listing preview card
@@ -108,7 +112,7 @@ Action selection rules:
 - Branding: custom logo URL + primary color
 - Gate Code: set the current monthly gate code. Auto-emailed on booking confirmation and monthly payment. "Send to All Active Tenants" sends it manually.
 - SMS Templates: 8 customizable templates with {{variable}} placeholders
-- Pricing Plans: per-space rates for Semi Truck (Daily/Weekly/Monthly) and RV (1 Month/3 Months/6 Months/1 Year)
+- Pricing Plans: per-space rates for Semi Truck (Daily/Weekly/Monthly) and RV (1 Month/3 Months/6 Months/1 Year). These rates are what populates the Pricing Plan dropdown in Walk-In Check-In and Add Tenant modals. If the dropdown shows only "Manual Entry", the pricing plans haven't been configured in Settings yet.
 - Notification Preferences: admin email recipients
 - Webhooks: URLs for tenant.created, payment.received, tenant.moveout events
 - API Key: view/copy/regenerate
