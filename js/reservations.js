@@ -557,19 +557,55 @@ async function handleRejectSubmit() {
 }
 
 async function verifyRegistration(tenantId) {
+  if (!tenantId || tenantId === 'undefined' || tenantId === 'null') {
+    showToast('Cannot verify: missing tenant ID.', 'error');
+    return;
+  }
   var tenant = getTenant(tenantId);
-  if (!tenant) return;
+  if (!tenant) {
+    showToast('Cannot verify: tenant not found — try refreshing.', 'error');
+    return;
+  }
+  var name = tenant.name;
   var fields = { id: tenantId, registrationStatus: 'verified' };
   try {
     await YB.saveTenant(fields);
-    Object.assign(tenant, fields);
-    showToast(tenant.name + ' marked as Verified', 'success');
+    var tenants = await YB.loadTenants();
+    APP_DATA.tenants = tenants;
+    showToast(name + ' marked as Verified', 'success');
   } catch (err) {
     Object.assign(tenant, fields);
-    showToast('Marked Verified (offline)', 'warning');
+    showToast('Verify failed: ' + (err.message || 'network error'), 'error');
   }
   renderTenantsTable();
   if (_panelTenantId === tenantId) openTenantPanel(tenantId);
+}
+
+async function verifyAllRegistrations() {
+  var toVerify = APP_DATA.tenants.filter(function(t) {
+    return t.registrationStatus !== 'verified' && t.status !== 'pending' && t.status !== 'past';
+  });
+  if (!toVerify.length) {
+    showToast('All eligible tenants are already verified.', 'success');
+    return;
+  }
+  var btn = document.getElementById('verifyAllBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...'; }
+  var failed = 0;
+  for (var i = 0; i < toVerify.length; i++) {
+    try {
+      await YB.saveTenant({ id: toVerify[i].id, registrationStatus: 'verified' });
+    } catch (e) {
+      failed++;
+    }
+  }
+  try {
+    APP_DATA.tenants = await YB.loadTenants();
+  } catch (e) {}
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-double"></i> Verify All'; }
+  var done = toVerify.length - failed;
+  showToast(done + ' tenant' + (done !== 1 ? 's' : '') + ' verified' + (failed ? ' (' + failed + ' failed)' : '') + '.', failed ? 'warning' : 'success');
+  renderTenantsTable();
 }
 
 // Formats a dollar amount with cents (formatCurrency() rounds to whole dollars,
@@ -1604,6 +1640,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   document.getElementById('closeSmsModal').addEventListener('click', function(){ document.getElementById('smsModal').classList.remove('open'); });
   document.getElementById('cancelSmsModal').addEventListener('click', function(){ document.getElementById('smsModal').classList.remove('open'); });
   document.getElementById('smsModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+
+  // Verify All button
+  var verifyAllBtn = document.getElementById('verifyAllBtn');
+  if (verifyAllBtn) verifyAllBtn.addEventListener('click', verifyAllRegistrations);
 
   // Export button
   var exportBtn = document.getElementById('exportTenantsBtn');
